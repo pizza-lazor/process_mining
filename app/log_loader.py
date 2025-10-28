@@ -148,7 +148,10 @@ def load_log_from_csv(
         try:
             df = pd.read_csv(buffer, sep=None, engine="python")
         except ParserError as exc_second:
-            raise LogFormatError(f"Unable to parse CSV content: {exc_second}") from exc_second
+            raise LogFormatError(
+                "Unable to parse CSV content. Ensure the file uses a consistent delimiter (e.g., comma or semicolon) "
+                "and that embedded commas are quoted."
+            ) from exc_second
     df = _normalise_dataframe(
         df,
         case_id_col=case_id_col,
@@ -195,9 +198,11 @@ def read_csv_summary(file_bytes: bytes) -> pd.DataFrame:
     buffer = io.BytesIO(file_bytes)
     try:
         return pd.read_csv(buffer, nrows=50)
-    except ParserError as exc:
+    except ParserError:
         buffer.seek(0)
         try:
-            return pd.read_csv(buffer, nrows=50, sep=None, engine="python")
+            return pd.read_csv(buffer, nrows=50, sep=None, engine="python", on_bad_lines="skip")
         except ParserError as exc_second:
-            raise LogFormatError(f"Unable to parse CSV preview: {exc_second}") from exc_second
+            raise LogFormatError(
+                "Unable to parse CSV preview. Check for mixed delimiters or irregular quoting."
+            ) from exc_second

@@ -1115,6 +1115,11 @@ class _FlowEdgePathItem(QtWidgets.QGraphicsPathItem):
         self._widget._handle_edge_hover(None)
         super().hoverLeaveEvent(event)
 
+    def mousePressEvent(self, event: QtWidgets.QGraphicsSceneMouseEvent) -> None:  # type: ignore[override]
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self._widget._handle_edge_click(self._key)
+        super().mousePressEvent(event)
+
 
 class _FlowEdgeArrowItem(QtWidgets.QGraphicsPolygonItem):
     def __init__(self, widget: "InteractiveProcessFlowWidget", key: tuple[str, str], polygon: QtGui.QPolygonF):
@@ -1130,6 +1135,11 @@ class _FlowEdgeArrowItem(QtWidgets.QGraphicsPolygonItem):
     def hoverLeaveEvent(self, event: QtWidgets.QGraphicsSceneHoverEvent) -> None:  # type: ignore[override]
         self._widget._handle_edge_hover(None)
         super().hoverLeaveEvent(event)
+
+    def mousePressEvent(self, event: QtWidgets.QGraphicsSceneMouseEvent) -> None:  # type: ignore[override]
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self._widget._handle_edge_click(self._key)
+        super().mousePressEvent(event)
 
 
 class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
@@ -1161,11 +1171,15 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         self._total_cases: int = 0
         self._node_items: Dict[str, Dict[str, Any]] = {}
         self._edge_items: Dict[tuple[str, str], Dict[str, Any]] = {}
+        self._edge_details: Dict[tuple[str, str], Dict[str, Any]] = {}
+        self._node_case_counts: Dict[str, int] = {}
         self._adjacency_out: Dict[str, Set[tuple[str, str]]] = {}
         self._adjacency_in: Dict[str, Set[tuple[str, str]]] = {}
         self._highlight_active: bool = False
         self._current_hover: Optional[str] = None
         self._current_edge_hover: Optional[tuple[str, str]] = None
+        self._locked_nodes: Optional[Set[str]] = None
+        self._locked_edges: Optional[Set[tuple[str, str]]] = None
         self._metadata_banner: Optional[QtWidgets.QGraphicsRectItem] = None
         self._info_panel: Optional[QtWidgets.QGraphicsTextItem] = None
 
@@ -1187,6 +1201,8 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         self._total_cases = 0
         self._node_items.clear()
         self._edge_items.clear()
+        self._edge_details.clear()
+        self._node_case_counts.clear()
         self._adjacency_out.clear()
         self._adjacency_in.clear()
         self._metadata_banner = None
@@ -1194,6 +1210,8 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         self._highlight_active = False
         self._current_hover = None
         self._current_edge_hover = None
+        self._locked_nodes = None
+        self._locked_edges = None
 
     def set_data(self, data: Dict[str, Any]) -> None:
         self._data = data
@@ -1229,11 +1247,18 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         starts: Dict[str, int] = self._data.get("starts", {})
         ends: Dict[str, int] = self._data.get("ends", {})
         performance_edges: Dict[tuple[str, str], Optional[float]] = self._data.get("performance_edges", {}) or {}
+        rework_edges: Dict[tuple[str, str], int] = self._data.get("rework_edges", {}) or {}
+        edge_cases: Dict[tuple[str, str], int] = self._data.get("edge_cases", {}) or {}
+        node_cases: Dict[str, int] = self._data.get("node_cases", {}) or {}
         metadata: Dict[str, Any] = self._data.get("metadata", {})
 
         self._total_cases = int(metadata.get("total_cases") or sum(starts.values()) or 0)
         if not self._total_cases:
             self._total_cases = max(sum(activities.values()), 1)
+        self._edge_details.clear()
+        self._node_case_counts = {node: node_cases.get(node, 0) for node in activities.keys()}
+        self._locked_nodes = None
+        self._locked_edges = None
 
         graph = nx.DiGraph()
         start_token = "__start__"
@@ -1284,6 +1309,8 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
                 "default_pen": QtGui.QPen(item.pen()),
                 "default_opacity": item.opacity(),
             }
+            if node in self._node_case_counts:
+                self._node_items[node]["cases"] = self._node_case_counts[node]
             self._adjacency_out.setdefault(node, set())
             self._adjacency_in.setdefault(node, set())
 
@@ -1294,6 +1321,8 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
                 continue
             key = (src, dst)
             perf_value = performance_edges.get(key)
+            # ensure loops derived from rework data are tracked even if absent in edges dict
+            is_rework = rework_edges.get(key, 0) > 0 or src == dst
             path_item, glow_item, arrow_item, label_item = self._create_edge_items(
                 src,
                 dst,
@@ -1304,8 +1333,9 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
                 perf_value,
                 perf_min,
                 perf_max,
+                is_rework=is_rework,
             )
-            tooltip = self._format_edge_tooltip(src, dst, weight, perf_value)
+            tooltip = self._format_edge_tooltip(src, dst, weight, perf_value, is_rework=is_rework)
             for gfx in (path_item, glow_item, arrow_item):
                 gfx.setToolTip(tooltip)
             if label_item:
@@ -1324,6 +1354,7 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
                 "label": label_item,
                 "frequency": weight,
                 "performance": perf_value,
+                "is_rework": is_rework,
                 "base_pen": QtGui.QPen(path_item.pen()),
                 "base_glow_pen": QtGui.QPen(glow_item.pen()),
                 "base_arrow_brush": QtGui.QBrush(arrow_item.brush()),
@@ -1332,6 +1363,10 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
             }
             self._adjacency_out.setdefault(src, set()).add(key)
             self._adjacency_in.setdefault(dst, set()).add(key)
+            self._edge_details[key] = {
+                "cases": edge_cases.get(key, 0),
+                "rework": rework_edges.get(key, 0),
+            }
 
         self._build_metadata_banner(metadata)
         self._build_info_panel(metadata)
@@ -1451,6 +1486,8 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         perf_value: Optional[float],
         perf_min: float,
         perf_max: float,
+        *,
+        is_rework: bool = False,
     ) -> tuple[_FlowEdgePathItem, QtWidgets.QGraphicsPathItem, _FlowEdgeArrowItem, Optional[QtWidgets.QGraphicsTextItem]]:
         start = QtCore.QPointF(src_pos.x() + 110, src_pos.y())
         end = QtCore.QPointF(dst_pos.x() - 110, dst_pos.y())
@@ -1462,7 +1499,9 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
 
         freq_norm = freq / max_freq if max_freq else 0
         width = 1.8 + freq_norm * 6.5
-        if self._mode == "performance" and perf_value is not None and perf_max:
+        if is_rework:
+            color = QtGui.QColor("#8f96ad")
+        elif self._mode == "performance" and perf_value is not None and perf_max:
             ratio = (perf_value - perf_min) / max(perf_max - perf_min, 1)
             color = _heat_colour(1 - ratio)
         else:
@@ -1471,14 +1510,18 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         path_item = _FlowEdgePathItem(self, (src, dst), path)
         pen = QtGui.QPen(color, width)
         pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+        if is_rework:
+            pen.setStyle(QtCore.Qt.PenStyle.DashLine)
         path_item.setPen(pen)
         path_item.setOpacity(0.88)
 
         glow = QtWidgets.QGraphicsPathItem(path)
         glow_pen = QtGui.QPen(QtGui.QColor(color.red(), color.green(), color.blue(), 120), width + 6)
         glow_pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+        if is_rework:
+            glow_pen.setStyle(QtCore.Qt.PenStyle.DashLine)
         glow.setPen(glow_pen)
-        glow.setOpacity(0.4)
+        glow.setOpacity(0.25 if is_rework else 0.4)
 
         direction = QtCore.QPointF(end - ctrl2)
         length = math.hypot(direction.x(), direction.y())
@@ -1500,9 +1543,11 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         arrow_item.setBrush(QtGui.QBrush(color))
         arrow_item.setPen(QtGui.QPen(color))
         arrow_item.setOpacity(0.92)
+        if is_rework:
+            arrow_item.setOpacity(0.75)
 
         label_item: Optional[QtWidgets.QGraphicsTextItem] = None
-        label_text = self._format_edge_label(freq, perf_value)
+        label_text = self._format_edge_label(freq, perf_value, is_rework=is_rework)
         if label_text:
             midpoint = path.pointAtPercent(0.45)
             label_item = QtWidgets.QGraphicsTextItem(label_text)
@@ -1512,7 +1557,7 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
 
         return path_item, glow, arrow_item, label_item
 
-    def _format_edge_label(self, freq: int, perf_value: Optional[float]) -> str:
+    def _format_edge_label(self, freq: int, perf_value: Optional[float], *, is_rework: bool = False) -> str:
         if self._mode == "performance":
             if perf_value is None:
                 return ""
@@ -1521,12 +1566,21 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
                 pct = freq / self._total_cases * 100
                 return f"{pretty} avg · {freq:,} cases ({pct:.1f}%)"
             return f"{pretty} avg · {freq:,} cases"
+        prefix = "Rework" if is_rework else f"{freq:,} cases"
         if self._total_cases:
             pct = freq / self._total_cases * 100
-            return f"{freq:,} cases · {pct:.1f}%"
-        return f"{freq:,} cases"
+            return f"{prefix} · {pct:.1f}%"
+        return prefix
 
-    def _format_edge_tooltip(self, src: str, dst: str, freq: int, perf_value: Optional[float]) -> str:
+    def _format_edge_tooltip(
+        self,
+        src: str,
+        dst: str,
+        freq: int,
+        perf_value: Optional[float],
+        *,
+        is_rework: bool = False,
+    ) -> str:
         src_label = "Start" if src == "__start__" else ("Complete" if src == "__end__" else src)
         dst_label = "Start" if dst == "__start__" else ("Complete" if dst == "__end__" else dst)
         tooltip = f"{src_label} → {dst_label}<br>{freq:,} cases"
@@ -1534,6 +1588,13 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
             tooltip += f" ({freq / self._total_cases:.1%})"
         if perf_value is not None:
             tooltip += f"<br>Avg duration: {_format_seconds_compact(perf_value)}"
+        if is_rework:
+            tooltip += "<br><span style='color:#FFAD17;'>Rework loop detected</span>"
+        details = self._edge_details.get((src, dst))
+        if details:
+            cases = details.get("cases")
+            if cases:
+                tooltip += f"<br>Cases touching edge: {cases:,}"
         return tooltip
 
     def _build_metadata_banner(self, metadata: Dict[str, Any]) -> None:
@@ -1575,7 +1636,7 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
 
     def _build_info_panel(self, metadata: Dict[str, Any]) -> None:
         panel = QtWidgets.QGraphicsTextItem(
-            "Hover nodes or paths to spotlight transitions.\nCtrl + scroll to zoom, drag to pan."
+            "Hover nodes or paths to spotlight transitions.\nClick to lock focus. Double-click background to reset.\nCtrl + scroll to zoom, drag to pan."
         )
         panel.setDefaultTextColor(QtGui.QColor("#9aa5d9"))
         panel.setFont(QtGui.QFont("Segoe UI", 9))
@@ -1593,17 +1654,19 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
             self._info_panel.setDefaultTextColor(QtGui.QColor("#f4f6ff"))
         else:
             self._info_panel.setPlainText(
-                "Hover nodes or paths to spotlight transitions.\nCtrl + scroll to zoom, drag to pan."
+                "Hover nodes or paths to spotlight transitions.\nClick to lock focus. Double-click background to reset.\nCtrl + scroll to zoom, drag to pan."
             )
             self._info_panel.setDefaultTextColor(QtGui.QColor("#9aa5d9"))
 
     def _handle_node_hover(self, key: Optional[str]) -> None:
         self._current_hover = key
         if key is None:
-            self._update_info_panel(None)
-            self._apply_highlight(None, None)
+            if self._locked_nodes:
+                self._apply_highlight(None, None)
+            else:
+                self._update_info_panel(None)
+                self._apply_highlight(None, None)
             return
-
         node_info = self._node_items.get(key)
         if not node_info:
             self._apply_highlight(None, None)
@@ -1612,17 +1675,15 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         freq = node_info.get("frequency", 0)
         pct = freq / self._total_cases * 100 if self._total_cases else 0
         label = "Start" if key == "__start__" else ("Complete" if key == "__end__" else key)
-        self._update_info_panel(f"{label}\n{freq:,} cases · {pct:.1f}% of flow")
+        case_count = node_info.get("cases", self._node_case_counts.get(key, 0))
+        details = f"{label}\n{freq:,} events · {pct:.1f}% of flow"
+        if case_count:
+            details += f"\nTouches {case_count:,} cases"
+        self._update_info_panel(details)
 
         active_nodes = {key}
-        if key in self._adjacency_out:
-            active_edges_out = self._adjacency_out[key]
-        else:
-            active_edges_out = set()
-        if key in self._adjacency_in:
-            active_edges_in = self._adjacency_in[key]
-        else:
-            active_edges_in = set()
+        active_edges_out = self._adjacency_out.get(key, set())
+        active_edges_in = self._adjacency_in.get(key, set())
         active_edges = set(active_edges_out) | set(active_edges_in)
         for edge_key in active_edges:
             src, dst = edge_key
@@ -1634,15 +1695,31 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         node_info = self._node_items.get(key)
         if not node_info:
             return
-        item: QtWidgets.QGraphicsPathItem = node_info["item"]
-        tooltip = item.toolTip()
-        QtWidgets.QToolTip.showText(QtGui.QCursor.pos(), tooltip)
+        freq = node_info.get("frequency", 0)
+        pct = freq / self._total_cases * 100 if self._total_cases else 0
+        label = "Start" if key == "__start__" else ("Complete" if key == "__end__" else key)
+        case_count = node_info.get("cases", self._node_case_counts.get(key, 0))
+        active_nodes = {key}
+        active_edges_out = self._adjacency_out.get(key, set())
+        active_edges_in = self._adjacency_in.get(key, set())
+        active_edges = set(active_edges_out) | set(active_edges_in)
+        for edge_key in active_edges:
+            active_nodes.update(edge_key)
+        self._apply_highlight(active_nodes, active_edges, persist=True)
+        summary = f"{label}\n{freq:,} events · {pct:.1f}% of flow"
+        if case_count:
+            summary += f"\nTouches {case_count:,} cases"
+        summary += "\nSelection locked. Double-click background to reset."
+        self._update_info_panel(summary)
 
     def _handle_edge_hover(self, key: Optional[tuple[str, str]]) -> None:
         self._current_edge_hover = key
         if key is None:
-            self._update_info_panel(None)
-            self._apply_highlight(None, None)
+            if self._locked_edges:
+                self._apply_highlight(None, None)
+            else:
+                self._update_info_panel(None)
+                self._apply_highlight(None, None)
             return
 
         record = self._edge_items.get(key)
@@ -1651,23 +1728,58 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
             return
         freq = record.get("frequency", 0)
         perf_value = record.get("performance")
-        tooltip = self._format_edge_tooltip(key[0], key[1], freq, perf_value)
+        is_rework = record.get("is_rework", False)
+        tooltip = self._format_edge_tooltip(key[0], key[1], freq, perf_value, is_rework=is_rework)
         tooltip = tooltip.replace("<br>", "\n")
         self._update_info_panel(tooltip)
         active_nodes = {key[0], key[1]}
         self._apply_highlight(active_nodes, {key})
 
+    def _handle_edge_click(self, key: tuple[str, str]) -> None:
+        record = self._edge_items.get(key)
+        if not record:
+            return
+        active_nodes = {key[0], key[1]}
+        self._apply_highlight(active_nodes, {key}, persist=True)
+        freq = record.get("frequency", 0)
+        perf_value = record.get("performance")
+        is_rework = record.get("is_rework", False)
+        tooltip = self._format_edge_tooltip(key[0], key[1], freq, perf_value, is_rework=is_rework).replace("<br>", "\n")
+        tooltip += "\nSelection locked. Double-click background to reset."
+        self._update_info_panel(tooltip)
+
     def _apply_highlight(
         self,
         active_nodes: Optional[Set[str]],
         active_edges: Optional[Set[tuple[str, str]]],
+        *,
+        persist: bool = False,
     ) -> None:
-        self._highlight_active = active_nodes is not None or active_edges is not None
+        if persist:
+            self._locked_nodes = set(active_nodes or set())
+            self._locked_edges = set(active_edges or set())
+        elif active_nodes is None and active_edges is None and self._locked_nodes is not None:
+            active_nodes = set(self._locked_nodes)
+            active_edges = set(self._locked_edges or set())
+
+        highlight_nodes = set(active_nodes) if active_nodes else set()
+        highlight_edges = set(active_edges) if active_edges else set()
+
+        if not persist and not highlight_nodes and not highlight_edges and self._locked_nodes:
+            highlight_nodes = set(self._locked_nodes)
+            highlight_edges = set(self._locked_edges or set())
+
+        if not highlight_nodes:
+            highlight_nodes = None
+        if not highlight_edges:
+            highlight_edges = None
+
+        self._highlight_active = bool(highlight_nodes or highlight_edges)
 
         for key, record in self._node_items.items():
             item: QtWidgets.QGraphicsPathItem = record["item"]
             base_pen: QtGui.QPen = record["default_pen"]
-            if active_nodes is None or key in (active_nodes or set()):
+            if not highlight_nodes or key in highlight_nodes:
                 highlight_pen = QtGui.QPen(base_pen)
                 highlight_pen.setWidthF(base_pen.widthF() + 1.2)
                 highlight_pen.setColor(QtGui.QColor("#f7f9ff"))
@@ -1690,7 +1802,7 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
             base_arrow_pen: QtGui.QPen = record["base_arrow_pen"]
             base_label_color: Optional[QtGui.QColor] = record["base_label_color"]
 
-            if active_edges is None or key in (active_edges or set()):
+            if not highlight_edges or key in highlight_edges:
                 highlight_pen = QtGui.QPen(base_pen)
                 highlight_pen.setWidthF(max(base_pen.widthF() + 2.6, 3.6))
                 highlight_pen.setColor(QtGui.QColor("#FFE39A"))
@@ -1741,6 +1853,14 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
             offset = math.sin(self._pulse_phase + idx * 0.6) * 0.03
             item.setScale(base_scale + offset)
 
+    def _clear_lock(self) -> None:
+        if not (self._locked_nodes or self._locked_edges):
+            return
+        self._locked_nodes = None
+        self._locked_edges = None
+        self._update_info_panel(None)
+        self._apply_highlight(None, None)
+
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:  # type: ignore[override]
         if event.modifiers() & QtCore.Qt.KeyboardModifier.ControlModifier:
             factor = 1.15 if event.angleDelta().y() > 0 else 1 / 1.15
@@ -1748,6 +1868,10 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
             event.accept()
         else:
             super().wheelEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent) -> None:  # type: ignore[override]
+        self._clear_lock()
+        super().mouseDoubleClickEvent(event)
 
 
 def _extract_count(label: Optional[str]) -> Optional[float]:
@@ -1947,6 +2071,7 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         self._happy_path_sequence: List[str] = []
         self._happy_path_label: str = ""
         self._dfg_data_cache: Optional[Dict[str, Any]] = None
+        self._part_flow_data: Optional[Dict[str, Any]] = None
         self._markov_image_item: Optional[pg.ImageItem] = None
         self._markov_states: List[str] = []
 
@@ -2258,10 +2383,68 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(18)
 
-        grid = QtWidgets.QGridLayout()
-        grid.setHorizontalSpacing(18)
-        grid.setVerticalSpacing(24)
-        grid.setContentsMargins(0, 0, 0, 0)
+        # Part / item flow explorer
+        self.part_flow_widget = InteractiveProcessFlowWidget()
+        self.part_flow_widget.setMinimumHeight(420)
+
+        part_container = QtWidgets.QWidget()
+        part_layout = QtWidgets.QVBoxLayout(part_container)
+        part_layout.setContentsMargins(0, 0, 0, 0)
+        part_layout.setSpacing(10)
+
+        part_controls = QtWidgets.QHBoxLayout()
+        part_controls.setSpacing(8)
+        part_controls.addWidget(QtWidgets.QLabel("Highlight"))
+
+        self.part_flow_mode_buttons = QtWidgets.QButtonGroup(self)
+        volume_btn = QtWidgets.QPushButton("Volume")
+        volume_btn.setCheckable(True)
+        volume_btn.setChecked(True)
+        performance_btn = QtWidgets.QPushButton("Velocity")
+        performance_btn.setCheckable(True)
+
+        for btn in (volume_btn, performance_btn):
+            btn.setStyleSheet(
+                """
+                QPushButton {
+                    padding: 6px 14px;
+                    border-radius: 12px;
+                    background-color: rgba(36, 40, 58, 0.8);
+                    color: #d7dbff;
+                }
+                QPushButton:checked {
+                    background-color: #715AFF;
+                    color: #ffffff;
+                    font-weight: 600;
+                }
+                QPushButton:hover {
+                    background-color: rgba(113, 90, 255, 0.65);
+                }
+                """
+            )
+
+        self.part_flow_mode_buttons.addButton(volume_btn, 0)
+        self.part_flow_mode_buttons.addButton(performance_btn, 1)
+        part_controls.addWidget(volume_btn)
+        part_controls.addWidget(performance_btn)
+        part_controls.addStretch(1)
+        self.part_flow_mode_buttons.buttonClicked.connect(self._on_part_flow_mode_changed)
+        part_layout.addLayout(part_controls)
+
+        part_layout.addWidget(self.part_flow_widget, stretch=1)
+        self.part_flow_caption = QtWidgets.QLabel(
+            "Select a node or path to lock focus. Rework loops appear in a muted grey."
+        )
+        self.part_flow_caption.setStyleSheet("color: #9aa5d9; font-size: 11px;")
+        self.part_flow_caption.setWordWrap(True)
+        part_layout.addWidget(self.part_flow_caption)
+
+        part_card = self._create_chart_card(
+            "Part / Item Flow Explorer",
+            part_container,
+            "Interactive drill-down view that surfaces the dominant part flows. Hover to explore coverage, click to lock, and watch grey arcs for rework loops.",
+        )
+        layout.addWidget(part_card)
 
         # Interactive Petri + SVG side-by-side
         self.process_svg = QtSvgWidgets.QSvgWidget()
@@ -2326,7 +2509,7 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             model_container,
             "Switch overlays, layout styles, and export the underlying Petri net or filtered log.",
         )
-        grid.addWidget(petri_card, 0, 0)
+        layout.addWidget(petri_card)
 
         # BPMN representation
         self.bpmn_widget = QtSvgWidgets.QSvgWidget()
@@ -2336,9 +2519,7 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             self.bpmn_widget,
             "Block-structured BPMN view converted from the discovered model for business-friendly communication.",
         )
-        grid.addWidget(bpmn_card, 0, 1)
-        grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(1, 1)
+        layout.addWidget(bpmn_card)
 
         # Markov heatmap
         self.markov_plot = pg.PlotWidget()
@@ -2365,7 +2546,7 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             markov_container,
             "Row-normalised transition probabilities for the busiest steps, exposing dominant loops and exits.",
         )
-        grid.addWidget(markov_card, 1, 0)
+        layout.addWidget(markov_card)
         self._clear_markov_heatmap()
 
         # Declare constraints table
@@ -2389,9 +2570,7 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             declare_container,
             "Auto-derived obligations (response, precedence, coexistence) to explain behavioural expectations.",
         )
-        grid.addWidget(declare_card, 1, 1)
-
-        layout.addLayout(grid)
+        layout.addWidget(declare_card)
 
         legend_group = QtWidgets.QGroupBox("How to read this model")
         legend_layout = QtWidgets.QVBoxLayout(legend_group)
@@ -2399,6 +2578,7 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         self.process_legend_label = QtWidgets.QLabel(
             """
             <ul>
+                <li>The <b>part / item flow explorer</b> surfaces dominant transitions and grey rework loops with interactive drill-down.</li>
                 <li>The <b>interactive Petri net</b> shows tokens and branching logic. Adjust overlays to focus on throughput or counts.</li>
                 <li>The <b>BPMN blueprint</b> restates the model in a business-friendly diagram ready for stakeholders.</li>
                 <li>The <b>Markov heatmap</b> highlights which steps typically follow each other, revealing loops and exits.</li>
@@ -2416,6 +2596,7 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         legend_layout.addWidget(self.process_summary_label)
 
         layout.addWidget(legend_group)
+        layout.addStretch(1)
 
         self.tabs.addTab(widget, "Process Flow")
 
@@ -2938,6 +3119,10 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         if not self.filtered_log:
             self.process_graph_widget.clear()
             self.process_svg.load(QtCore.QByteArray())
+            if hasattr(self, "part_flow_widget"):
+                self.part_flow_widget.clear()
+            if hasattr(self, "part_flow_caption"):
+                self.part_flow_caption.setText("Load a log to explore part flow.")
             if hasattr(self, "bpmn_widget"):
                 self.bpmn_widget.load(QtCore.QByteArray())
             if hasattr(self, "declare_model"):
@@ -2947,6 +3132,16 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             if hasattr(self, "markov_plot"):
                 self._clear_markov_heatmap()
             return
+
+        if hasattr(self, "part_flow_widget"):
+            try:
+                self._part_flow_data = process_analysis.compute_dfg_frequency_data(self.filtered_log, max_activities=16)
+                self._refresh_part_flow_widget()
+            except Exception as exc:  # pylint: disable=broad-except
+                self.logger.exception("Failed to compute part/item flow explorer data.")
+                self._part_flow_data = None
+                self.part_flow_widget.clear()
+                self.part_flow_caption.setText("Part flow view unavailable – see logs for details.")
         try:
             self._artifacts = process_analysis.discover_process_model(self.filtered_log.event_log)
             self.logger.info("Process model discovered for current selection.")
@@ -3341,6 +3536,54 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         self.variant_flow_meta.setText(f"<small>{text}</small>")
 
     # UI helpers -----------------------------------------------------------
+
+    def _refresh_part_flow_widget(self) -> None:
+        if not hasattr(self, "part_flow_widget"):
+            return
+        if not self._part_flow_data:
+            self.part_flow_widget.clear()
+            if hasattr(self, "part_flow_caption"):
+                self.part_flow_caption.setText("Load a log to explore part flow.")
+            return
+        mode_id = self.part_flow_mode_buttons.checkedId() if hasattr(self, "part_flow_mode_buttons") else 0
+        mode = "performance" if mode_id == 1 else "frequency"
+        self.part_flow_widget.set_mode(mode)
+        self.part_flow_widget.set_data(self._part_flow_data)
+        self._update_part_flow_caption(self._part_flow_data.get("metadata"), mode)
+
+    def _update_part_flow_caption(self, metadata: Optional[Dict[str, Any]], mode: str) -> None:
+        if not hasattr(self, "part_flow_caption"):
+            return
+        if not metadata:
+            self.part_flow_caption.setText("Load a log to explore part flow.")
+            return
+        total_cases = metadata.get("total_cases")
+        truncated = metadata.get("truncated", 0)
+        if mode == "performance":
+            base = (
+                "Velocity mode: teal arcs are quicker, coral arcs spotlight slower transitions; grey arcs highlight rework loops."
+            )
+        else:
+            base = "Volume mode: thicker links show busier transitions; grey arcs highlight repeat loops."
+        parts = [base]
+        if total_cases:
+            parts.append(f"{int(total_cases):,} cases summarised")
+        if truncated:
+            parts.append(f"{int(truncated)} low-volume steps hidden for clarity")
+        self.part_flow_caption.setText(" • ".join(parts))
+
+    def _on_part_flow_mode_changed(self, button: QtWidgets.QAbstractButton) -> None:
+        if not hasattr(self, "part_flow_widget"):
+            return
+        if button is None:
+            return
+        mode = "performance" if self.part_flow_mode_buttons.id(button) == 1 else "frequency"
+        if not self._part_flow_data:
+            self.part_flow_widget.set_mode(mode)
+            return
+        self.part_flow_widget.set_mode(mode)
+        self.part_flow_widget.set_data(self._part_flow_data)
+        self._update_part_flow_caption(self._part_flow_data.get("metadata"), mode)
 
     def _on_dfg_mode_changed(self, button: QtWidgets.QAbstractButton) -> None:
         if not button:

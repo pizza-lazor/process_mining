@@ -3,6 +3,7 @@ from __future__ import annotations
 import statistics
 from dataclasses import dataclass
 from itertools import permutations
+from collections import defaultdict
 from datetime import timedelta
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -448,6 +449,30 @@ def compute_dfg_frequency_data(
     filtered_start = {act: freq for act, freq in start_activities.items() if act in keep}
     filtered_end = {act: freq for act, freq in end_activities.items() if act in keep}
 
+    df = log_container.df.sort_values(["case_id", "timestamp"])
+    edge_case_map: Dict[tuple[str, str], set[str]] = defaultdict(set)
+    node_case_map: Dict[str, set[str]] = defaultdict(set)
+    rework_counts: Dict[tuple[str, str], int] = defaultdict(int)
+
+    for case_id, case_df in df.groupby("case_id"):
+        events = [act for act in case_df["activity"].tolist() if act in keep]
+        prev_act: Optional[str] = None
+        for act in events:
+            node_case_map[act].add(case_id)
+            if prev_act is not None:
+                edge = (prev_act, act)
+                edge_case_map[edge].add(case_id)
+                if prev_act == act:
+                    rework_counts[edge] += 1
+                    if edge not in filtered_edges:
+                        filtered_edges[edge] = rework_counts[edge]
+                elif edge not in filtered_edges:
+                    filtered_edges[edge] = len(edge_case_map[edge])
+            prev_act = act
+
+    edge_case_counts = {edge: len(cases) for edge, cases in edge_case_map.items()}
+    node_case_counts = {node: len(cases) for node, cases in node_case_map.items()}
+
     metadata = {
         "total_activities": len(activity_frequency),
         "kept_activities": len(filtered_activity_freq),
@@ -466,6 +491,9 @@ def compute_dfg_frequency_data(
         "starts": filtered_start,
         "ends": filtered_end,
         "performance_edges": filtered_performance,
+        "rework_edges": {edge: count for edge, count in rework_counts.items() if count > 0},
+        "edge_cases": edge_case_counts,
+        "node_cases": node_case_counts,
         "metadata": metadata,
     }
 
