@@ -1,0 +1,480 @@
+2025-10-27 12:43:23,941 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 12:43:23,942 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 12:43:23,950 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 12:43:24,070 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 12:43:25,643 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 12:43:25,663 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 12:43:25,684 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 12:43:25,685 INFO process_mining_app.ui: Process model visual updated.
+2025-10-27 12:43:25,703 ERROR process_mining_app.ui: Failed to generate DFG visualisations.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 912, in update_behaviour_views
+    freq_svg, perf_svg = process_analysis.build_dfg_figures(self.filtered_log)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/process_analysis.py", line 149, in build_dfg_figures
+    freq_svg = dfg_visualizer.serialize(freq_gviz).encode("utf-8")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'bytes' object has no attribute 'encode'
+2025-10-27 12:43:25,703 WARNING process_mining_app.ui: Unable to generate DFGs: 'bytes' object has no attribute 'encode'
+2025-10-27 12:43:28,537 ERROR process_mining_app.ui: Failed to compute behavioural analytics.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 928, in update_behaviour_views
+    variants_df = process_analysis.compute_variants_table(self.filtered_log)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/process_analysis.py", line 161, in compute_variants_table
+    "variant": " → ".join(event["concept:name"] for event in variant),
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/process_analysis.py", line 161, in <genexpr>
+    "variant": " → ".join(event["concept:name"] for event in variant),
+                          ~~~~~^^^^^^^^^^^^^^^^
+TypeError: string indices must be integers, not 'str'
+2025-10-27 12:43:28,538 WARNING process_mining_app.ui: Could not compute behavioural analytics: string indices must be integers, not 'str'
+2025-10-27 12:43:30,189 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 12:43:30,190 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 13:01:51,997 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 13:01:51,997 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 13:01:52,009 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 13:01:52,125 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 13:01:54,790 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 13:01:54,802 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 13:01:54,831 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:01:54,832 INFO process_mining_app.ui: Process model visual updated.
+2025-10-27 13:01:54,834 ERROR process_mining_app.ui: Failed to load sample log.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 849, in load_sample_log
+    self._set_log_container(container)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 934, in _set_log_container
+    self.refresh_views()
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 1039, in refresh_views
+    self.update_process_model()
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 1070, in update_process_model
+    self.process_graph_widget.update_graph(self._artifacts)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 220, in update_graph
+    if isinstance(node, pn_obj.Place):
+                        ^^^^^^^^^^^^
+AttributeError: module 'pm4py.objects.petri_net.obj' has no attribute 'Place'
+2025-10-27 13:01:54,835 ERROR process_mining_app.ui: Failed to load sample log: module 'pm4py.objects.petri_net.obj' has no attribute 'Place'
+2025-10-27 13:02:52,662 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/sample_order_to_cash.csv
+2025-10-27 13:03:04,730 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 13:03:04,753 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:03:04,753 INFO process_mining_app.ui: Process model visual updated.
+2025-10-27 13:03:04,755 ERROR process_mining_app.ui: Failed to load CSV file /home/pizza_lazor/Documents/Development/pm4py/data/sample_order_to_cash.csv
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 888, in open_csv
+    self._set_log_container(container)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 934, in _set_log_container
+    self.refresh_views()
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 1039, in refresh_views
+    self.update_process_model()
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 1070, in update_process_model
+    self.process_graph_widget.update_graph(self._artifacts)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 220, in update_graph
+    if isinstance(node, pn_obj.Place):
+                        ^^^^^^^^^^^^
+AttributeError: module 'pm4py.objects.petri_net.obj' has no attribute 'Place'
+2025-10-27 13:03:04,756 ERROR process_mining_app.ui: Failed to load CSV: module 'pm4py.objects.petri_net.obj' has no attribute 'Place'
+2025-10-27 13:03:10,929 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 13:05:56,219 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 13:05:56,219 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 13:05:56,227 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 13:05:56,334 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 13:05:58,946 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 13:05:58,969 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 13:05:58,994 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:05:58,995 INFO process_mining_app.ui: Process model visual updated.
+2025-10-27 13:05:58,999 INFO process_mining_app.ui: Interactive Petri net refreshed (19 decorated elements).
+2025-10-27 13:05:59,036 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 13:05:59,047 ERROR process_mining_app.ui: Failed to compute behavioural analytics.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 1100, in update_behaviour_views
+    self._plot_variants(variants_df)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 1271, in _plot_variants
+    axis.setStyle(tickTextAngle=40)
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pyqtgraph/graphicsItems/AxisItem.py", line 184, in setStyle
+    raise NameError("%s is not a valid style argument." % kwd)
+NameError: tickTextAngle is not a valid style argument.
+2025-10-27 13:05:59,048 WARNING process_mining_app.ui: Could not compute behavioural analytics: tickTextAngle is not a valid style argument.
+2025-10-27 13:06:10,023 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 13:06:10,023 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 13:06:25,928 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 13:17:22,143 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 13:17:22,143 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 13:17:22,153 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 13:17:22,273 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 13:17:25,375 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 13:17:25,387 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 13:17:25,408 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:17:25,409 INFO process_mining_app.ui: Process model visual updated.
+2025-10-27 13:17:25,416 INFO process_mining_app.ui: Interactive Petri net refreshed (19 decorated elements).
+2025-10-27 13:17:25,453 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 13:17:25,470 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 13:17:25,486 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 13:17:25,487 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 13:19:36,640 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 13:30:10,503 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 13:30:10,503 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 13:30:10,511 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 13:30:10,631 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 13:30:13,262 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 13:30:13,273 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 13:30:13,297 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:30:13,315 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 13:30:13,319 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-27 13:30:13,351 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 13:30:13,367 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 13:30:13,383 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 13:30:13,384 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 13:31:00,640 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 13:31:00,645 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 13:31:00,665 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:31:00,682 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 13:31:00,685 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-27 13:31:00,723 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 13:31:00,737 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 13:31:00,741 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 13:31:00,742 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 13:31:09,151 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:31:09,167 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 13:31:09,170 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=2).
+2025-10-27 13:31:09,201 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 13:31:09,216 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 13:31:09,217 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 13:31:09,217 INFO process_mining_app.ui: Filters applied. Remaining 9 events across 9 cases.
+2025-10-27 13:31:18,665 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:31:18,684 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 13:31:18,686 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=2).
+2025-10-27 13:31:18,718 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 13:31:18,732 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 13:31:18,733 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 13:31:18,733 INFO process_mining_app.ui: Filters applied. Remaining 1 events across 1 cases.
+2025-10-27 13:31:27,138 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:31:27,156 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 13:31:27,159 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=10).
+2025-10-27 13:31:27,192 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 13:31:27,206 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 13:31:27,207 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 13:31:27,207 INFO process_mining_app.ui: Filters applied. Remaining 5 events across 1 cases.
+2025-10-27 13:31:39,267 INFO process_mining_app.ui: Process model visual updated (performance mode).
+2025-10-27 13:31:39,271 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=performance, edges=10).
+2025-10-27 13:31:41,399 INFO process_mining_app.ui: Process model visual updated (plain mode).
+2025-10-27 13:31:41,402 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=plain, edges=10).
+2025-10-27 13:32:08,325 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 13:34:47,569 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 13:34:47,569 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 13:34:47,578 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 13:34:47,694 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 13:35:45,705 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 13:35:45,717 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 13:35:45,741 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 13:35:45,757 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 13:35:45,762 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-27 13:35:45,794 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 13:35:45,809 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 13:35:45,823 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 13:35:45,823 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 13:37:11,347 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 20:12:37,950 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 20:12:37,950 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 20:12:37,965 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 20:12:38,087 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 20:12:41,306 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 20:12:41,320 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 20:12:41,348 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 20:12:41,366 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 20:12:41,370 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-27 20:12:41,401 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 20:12:41,415 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 20:12:41,437 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 20:12:41,437 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 20:30:03,583 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 20:39:45,456 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 20:39:45,456 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 20:39:45,464 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 20:39:45,604 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 20:40:14,931 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 20:40:14,941 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 20:40:14,969 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 20:40:14,987 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 20:40:14,991 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-27 20:40:15,029 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 20:40:15,043 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 20:40:15,056 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 20:40:15,057 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 20:50:02,003 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 21:42:57,750 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 21:42:57,752 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 21:42:57,764 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 21:43:39,021 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 21:43:39,022 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 21:43:39,032 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 21:48:57,175 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 21:48:57,176 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 21:48:57,187 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 21:53:35,185 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 21:53:35,186 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 21:53:35,208 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 21:55:41,954 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 21:55:41,955 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 21:55:41,965 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 21:56:20,859 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 21:57:40,741 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 21:58:22,301 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 21:58:22,302 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 21:58:22,313 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 21:58:22,455 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 21:58:26,077 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 21:58:26,091 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 21:58:26,131 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 21:58:26,150 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 21:58:26,159 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-27 21:58:26,165 ERROR process_mining_app.ui: Failed to compute flow map data.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 1938, in update_variant_explorer
+    dfg_data = process_analysis.compute_dfg_frequency_data(self.filtered_log)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/process_analysis.py", line 419, in compute_dfg_frequency_data
+    activity_frequency = dfg_algorithm.apply_activity_frequency(log_container.event_log)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'pm4py.algo.discovery.dfg.algorithm' has no attribute 'apply_activity_frequency'
+2025-10-27 21:58:26,166 WARNING process_mining_app.ui: Could not build flow map: module 'pm4py.algo.discovery.dfg.algorithm' has no attribute 'apply_activity_frequency'
+2025-10-27 21:58:29,564 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 21:58:29,583 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 21:58:29,629 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 21:58:29,629 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 22:00:16,546 INFO process_mining_app.ui: Process model visual updated (performance mode).
+2025-10-27 22:00:16,550 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=performance, edges=14).
+2025-10-27 22:00:18,383 INFO process_mining_app.ui: Process model visual updated (plain mode).
+2025-10-27 22:00:18,387 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=plain, edges=14).
+2025-10-27 22:00:30,190 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 22:01:49,331 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 22:01:49,331 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 22:01:49,339 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 22:01:49,467 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 22:01:58,017 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 22:01:58,028 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 22:01:58,054 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 22:01:58,070 INFO process_mining_app.ui: Process model visual updated (performance mode).
+2025-10-27 22:01:58,076 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=performance, edges=14).
+2025-10-27 22:01:58,081 ERROR process_mining_app.ui: Failed to compute flow map data.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 1938, in update_variant_explorer
+    dfg_data = process_analysis.compute_dfg_frequency_data(self.filtered_log)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/process_analysis.py", line 419, in compute_dfg_frequency_data
+    activity_frequency = dfg_algorithm.apply_activity_frequency(log_container.event_log)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'pm4py.algo.discovery.dfg.algorithm' has no attribute 'apply_activity_frequency'
+2025-10-27 22:01:58,082 WARNING process_mining_app.ui: Could not build flow map: module 'pm4py.algo.discovery.dfg.algorithm' has no attribute 'apply_activity_frequency'
+2025-10-27 22:01:59,844 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 22:01:59,860 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 22:01:59,873 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 22:01:59,873 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 22:02:07,441 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 22:03:08,169 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 22:19:25,864 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 22:19:25,865 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 22:19:25,873 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 22:19:26,003 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 22:19:29,358 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 22:19:29,369 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 22:19:29,398 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 22:19:29,415 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 22:19:29,422 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-27 22:19:29,427 ERROR process_mining_app.ui: Failed to compute flow map data.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 2276, in update_variant_explorer
+    dfg_data = process_analysis.compute_dfg_frequency_data(self.filtered_log)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/process_analysis.py", line 425, in compute_dfg_frequency_data
+    activity_frequency = dfg_algorithm.apply_activity_frequency(log_container.event_log)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'pm4py.algo.discovery.dfg.algorithm' has no attribute 'apply_activity_frequency'
+2025-10-27 22:19:29,427 WARNING process_mining_app.ui: Could not build flow map: module 'pm4py.algo.discovery.dfg.algorithm' has no attribute 'apply_activity_frequency'
+2025-10-27 22:19:31,642 INFO process_mining_app.ui: DFG visualisations refreshed.
+2025-10-27 22:19:31,658 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 22:19:31,673 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 22:19:31,673 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 22:19:58,296 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 22:34:07,054 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 22:34:07,055 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 22:34:07,063 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 22:34:07,163 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 22:34:11,301 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-27 22:34:11,312 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-27 22:34:11,339 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 22:34:11,358 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 22:34:11,365 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-27 22:34:11,381 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-27 22:34:11,394 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 22:34:11,406 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 22:34:11,407 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-27 22:41:21,822 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 22:41:21,822 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 22:41:21,861 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 22:41:21,967 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 22:42:55,460 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 22:42:58,948 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-27 22:46:01,824 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-27 22:46:01,824 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-27 22:46:01,866 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-27 22:46:01,969 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-27 22:46:12,141 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv
+2025-10-27 22:46:45,306 ERROR process_mining_app.ui: Failed to load CSV file /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 2659, in open_csv
+    container = load_log_from_csv(
+                ^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/log_loader.py", line 144, in load_log_from_csv
+    df = _normalise_dataframe(
+         ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/log_loader.py", line 83, in _normalise_dataframe
+    normalised["case:concept:name"] = normalised["case_id"]
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/core/frame.py", line 4301, in __setitem__
+    self._set_item_frame_value(key, value)
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/core/frame.py", line 4459, in _set_item_frame_value
+    raise ValueError(
+ValueError: Cannot set a DataFrame with multiple columns to the single column case:concept:name
+2025-10-27 22:46:45,331 ERROR process_mining_app.ui: Failed to load CSV: Cannot set a DataFrame with multiple columns to the single column case:concept:name
+2025-10-27 22:46:57,858 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv
+2025-10-27 22:47:02,806 INFO process_mining_app.ui: Log context updated (2273 events, 300 cases, 10 activities).
+2025-10-27 22:47:02,865 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 22:47:02,882 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 22:47:02,894 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-27 22:47:02,925 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-27 22:47:02,945 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 22:47:02,967 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 22:47:02,967 INFO process_mining_app.ui: CSV log loaded from /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv (2273 events, 300 cases).
+2025-10-27 22:47:16,585 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 22:47:16,600 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 22:47:16,603 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=2).
+2025-10-27 22:47:16,611 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-27 22:47:16,624 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 22:47:16,625 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 22:47:16,625 INFO process_mining_app.ui: Filters applied. Remaining 1 events across 1 cases.
+2025-10-27 22:47:23,402 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 22:47:23,419 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 22:47:23,421 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=2).
+2025-10-27 22:47:23,428 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-27 22:47:23,439 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 22:47:23,440 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 22:47:23,440 INFO process_mining_app.ui: Filters applied. Remaining 2 events across 2 cases.
+2025-10-27 22:47:29,637 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-27 22:47:29,651 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-27 22:47:29,654 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=2).
+2025-10-27 22:47:29,660 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-27 22:47:29,670 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-27 22:47:29,671 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-27 22:47:29,671 INFO process_mining_app.ui: Filters applied. Remaining 3 events across 3 cases.
+2025-10-27 22:47:32,979 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-28 10:17:24,385 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 10:17:24,386 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 10:17:24,423 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 10:17:24,536 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 10:17:27,682 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-28 10:17:27,694 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-28 10:17:27,719 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 10:17:27,734 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 10:17:27,742 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-28 10:17:27,792 ERROR process_mining_app.ui: Failed to compute transition probabilities.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 2980, in update_process_model
+    self._plot_markov_heatmap(markov_data)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 3393, in _plot_markov_heatmap
+    image_item.translate(-0.5, -0.5)
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ImageItem' object has no attribute 'translate'
+2025-10-28 10:17:27,793 WARNING process_mining_app.ui: Could not compute transition probabilities: 'ImageItem' object has no attribute 'translate'
+2025-10-28 10:17:30,011 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 10:17:30,026 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 10:17:30,042 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 10:17:30,042 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-28 10:19:10,897 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/manufacturing.csv
+2025-10-28 10:19:10,898 ERROR process_mining_app.ui: Unable to read CSV preview for /home/pizza_lazor/Documents/Development/pm4py/data/manufacturing.csv
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 2717, in open_csv
+    preview = read_csv_summary(bytes_data)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/log_loader.py", line 188, in read_csv_summary
+    return pd.read_csv(buffer, nrows=50)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 626, in _read
+    return parser.read(nrows)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1923, in read
+    ) = self._engine.read(  # type: ignore[attr-defined]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/c_parser_wrapper.py", line 234, in read
+    chunks = self._reader.read_low_memory(nrows)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "parsers.pyx", line 850, in pandas._libs.parsers.TextReader.read_low_memory
+  File "parsers.pyx", line 905, in pandas._libs.parsers.TextReader._read_rows
+  File "parsers.pyx", line 874, in pandas._libs.parsers.TextReader._tokenize_rows
+  File "parsers.pyx", line 891, in pandas._libs.parsers.TextReader._check_tokenize_status
+  File "parsers.pyx", line 2061, in pandas._libs.parsers.raise_parser_error
+pandas.errors.ParserError: Error tokenizing data. C error: Expected 1 fields in line 6, saw 3
+
+2025-10-28 10:19:10,899 ERROR process_mining_app.ui: Unable to read CSV preview: Error tokenizing data. C error: Expected 1 fields in line 6, saw 3
+
+2025-10-28 10:21:15,074 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-28 10:21:16,185 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 10:21:16,224 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 10:21:16,235 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 10:21:16,376 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 10:22:05,186 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv
+2025-10-28 10:22:07,352 INFO process_mining_app.ui: Log context updated (2273 events, 300 cases, 10 activities).
+2025-10-28 10:22:07,421 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 10:22:07,440 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 10:22:07,453 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-28 10:22:07,525 ERROR process_mining_app.ui: Failed to compute transition probabilities.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 2980, in update_process_model
+    self._plot_markov_heatmap(markov_data)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 3393, in _plot_markov_heatmap
+    image_item.translate(-0.5, -0.5)
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ImageItem' object has no attribute 'translate'
+2025-10-28 10:22:07,526 WARNING process_mining_app.ui: Could not compute transition probabilities: 'ImageItem' object has no attribute 'translate'
+2025-10-28 10:22:56,509 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 10:22:56,536 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 10:22:56,560 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 10:22:56,560 INFO process_mining_app.ui: CSV log loaded from /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv (2273 events, 300 cases).
+2025-10-28 10:23:02,133 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-28 10:23:05,535 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 10:23:05,536 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 10:23:05,572 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 10:23:05,686 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 10:23:12,651 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-28 10:23:12,662 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-28 10:23:12,691 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 10:23:12,708 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 10:23:12,715 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-28 10:23:12,754 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 10:23:12,766 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 10:23:12,779 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 10:23:12,779 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-28 10:23:30,851 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 10:23:30,868 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 10:23:30,872 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=10).
+2025-10-28 10:23:30,905 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 10:23:30,918 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 10:23:30,920 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 10:23:30,920 INFO process_mining_app.ui: Filters applied. Remaining 5 events across 1 cases.
+2025-10-28 10:24:45,292 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-28 10:24:51,026 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 10:24:51,026 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 10:24:51,062 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 10:24:51,174 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 10:24:58,067 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-28 10:24:58,077 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-28 10:24:58,104 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 10:24:58,121 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 10:24:58,128 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-28 10:24:58,168 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 10:24:58,181 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 10:24:58,193 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 10:24:58,193 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-28 10:32:05,112 INFO process_mining_app.runtime: Application closed with exit code 0
