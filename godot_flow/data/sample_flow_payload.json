@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "total_cases": 120,
+    "kept_activities": 5,
+    "max_edge_weight": 96,
+    "max_edge_duration": 86400.0,
+    "min_edge_duration": 1200.0
+  },
+  "nodes": [
+    { "id": "__start__", "label": "Start", "frequency": 120, "cases": 120 },
+    { "id": "Receive Order", "label": "Receive Order", "frequency": 118, "cases": 118 },
+    { "id": "Check Inventory", "label": "Check Inventory", "frequency": 110, "cases": 110 },
+    { "id": "Pack Goods", "label": "Pack Goods", "frequency": 104, "cases": 104 },
+    { "id": "Ship Goods", "label": "Ship Goods", "frequency": 100, "cases": 100 },
+    { "id": "__end__", "label": "Complete", "frequency": 120, "cases": 120 }
+  ],
+  "edges": [
+    { "source": "__start__", "target": "Receive Order", "frequency": 118, "cases": 118, "duration_seconds": 2400.0, "is_rework": false },
+    { "source": "Receive Order", "target": "Check Inventory", "frequency": 110, "cases": 110, "duration_seconds": 3600.0, "is_rework": false },
+    { "source": "Check Inventory", "target": "Pack Goods", "frequency": 104, "cases": 104, "duration_seconds": 5400.0, "is_rework": false },
+    { "source": "Pack Goods", "target": "Ship Goods", "frequency": 100, "cases": 100, "duration_seconds": 86400.0, "is_rework": false },
+    { "source": "Ship Goods", "target": "__end__", "frequency": 100, "cases": 100, "duration_seconds": 4200.0, "is_rework": false },
+    { "source": "Check Inventory", "target": "Check Inventory", "frequency": 8, "cases": 8, "duration_seconds": 1200.0, "is_rework": true }
+  ]
+}

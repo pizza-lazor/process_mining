@@ -12,12 +12,13 @@ This document tracks the major experience upgrades we plan to implement, in orde
 - [x] Provide a Sankey/funnel view built from directly-follows counts.
 - [x] Enhance the flow map with interactive highlighting, percent tooltips, and legend metadata.
 
-## Stage 3 – Bottleneck Explorer (future)
-- [ ] Surface wait-time heatmaps and slowest transition lists.
+## Stage 3 – Bottleneck Explorer (in progress)
+- [x] Surface slowest transition lists with predictive bottleneck hints.
+- [ ] Surface wait-time heatmaps.
 - [ ] Expand resource workload visuals with backlog/high-load indicators.
 
-## Stage 4 – Case Drill-down (future)
-- [ ] Case timeline/Gantt for selected cases.
+## Stage 4 – Case Drill-down (in progress)
+- [x] Case timeline/Gantt for the current filter slice with pop-out detail.
 - [ ] Slice summary panel (duration distribution, rework %, top resources).
 
 ## Stage 5 – Alerts & Suggestions (future)
@@ -27,5 +28,7 @@ This document tracks the major experience upgrades we plan to implement, in orde
 ## Stage 6 – Interactive Flow View (in progress)
 - [x] Prototype an arcade-style directly-follows explorer with hover highlights and neon theming.
 - [x] Add a multi-model studio showing Petri, BPMN, Markov, and Declare perspectives simultaneously.
+- [x] Overlay swimlanes and detachable explorers for the non-Petri process flow.
+- [x] Bootstrap Godot prototype fed by Python JSON exporter for advanced rendering experiments.
 - [ ] Build a non-Petri “process flow” visualization with clickable layers.
 - [ ] Synchronise flow view selections with other panels.

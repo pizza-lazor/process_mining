@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import difflib
 import logging
+import copy
+import json
 import math
 import pathlib
 import re
 import sys
 from collections import deque
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import networkx as nx
 import numpy as np
@@ -1175,6 +1177,9 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         self._node_case_counts: Dict[str, int] = {}
         self._adjacency_out: Dict[str, Set[tuple[str, str]]] = {}
         self._adjacency_in: Dict[str, Set[tuple[str, str]]] = {}
+        self._lane_map: Dict[str, str] = {}
+        self._lane_palette: Dict[str, QtGui.QColor] = {}
+        self._lane_legend_items: List[QtWidgets.QGraphicsItem] = []
         self._highlight_active: bool = False
         self._current_hover: Optional[str] = None
         self._current_edge_hover: Optional[tuple[str, str]] = None
@@ -1212,6 +1217,9 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         self._current_edge_hover = None
         self._locked_nodes = None
         self._locked_edges = None
+        self._lane_map = {}
+        self._lane_palette = {}
+        self._clear_lane_legend()
 
     def set_data(self, data: Dict[str, Any]) -> None:
         self._data = data
@@ -1226,6 +1234,119 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         if self._data:
             self._rebuild_scene()
 
+    def set_lane_map(self, lane_map: Dict[str, str], palette: Dict[str, QtGui.QColor]) -> None:
+        self._lane_map = {str(node): str(lane) for node, lane in lane_map.items() if lane}
+        converted: Dict[str, QtGui.QColor] = {}
+        for lane, color in (palette or {}).items():
+            if isinstance(color, QtGui.QColor):
+                converted[lane] = QtGui.QColor(color)
+            else:
+                converted[lane] = QtGui.QColor(str(color))
+        self._lane_palette = converted
+        self._apply_lane_colours()
+
+    def lane_map(self) -> Dict[str, str]:
+        return dict(self._lane_map)
+
+    def lane_colors(self) -> Dict[str, QtGui.QColor]:
+        return {lane: QtGui.QColor(color) for lane, color in self._lane_palette.items()}
+
+    def _apply_lane_colours(self) -> None:
+        if not self._node_items:
+            self._clear_lane_legend()
+            return
+        lanes_present: Set[str] = set()
+        for node, details in self._node_items.items():
+            item: _FlowNodeItem = details["item"]
+            # Remove existing lane adornments if present.
+            for key in ("lane_badge_bg", "lane_badge_label"):
+                badge = details.pop(key, None)
+                if badge and badge.scene():
+                    self._scene.removeItem(badge)
+
+            node_type = details.get("type")
+            if node_type != "activity":
+                item.setBrush(details.get("base_brush", item.brush()))
+                item.setPen(details.get("base_pen", QtGui.QPen(item.pen())))
+                continue
+
+            lane = self._lane_map.get(node)
+            details["lane"] = lane
+            if lane and lane in self._lane_palette:
+                lane_color = QtGui.QColor(self._lane_palette[lane])
+                rect = item.path().boundingRect()
+                gradient = QtGui.QLinearGradient(rect.topLeft(), rect.bottomRight())
+                gradient.setColorAt(0.0, lane_color.lighter(130))
+                gradient.setColorAt(1.0, lane_color.darker(170))
+                item.setBrush(QtGui.QBrush(gradient))
+                item.setPen(QtGui.QPen(lane_color.darker(160), 1.8))
+                lanes_present.add(lane)
+                details["base_brush"] = QtGui.QBrush(item.brush())
+                details["base_pen"] = QtGui.QPen(item.pen())
+
+                label_text = lane if len(lane) <= 18 else f"{lane[:15]}…"
+                badge_width = max(48.0, min(140.0, rect.width() - 40.0))
+                badge_bg = QtWidgets.QGraphicsRectItem(item)
+                badge_bg.setRect(rect.right() - badge_width - 12, rect.bottom() - 28, badge_width, 18)
+                badge_bg.setBrush(QtGui.QBrush(QtGui.QColor(15, 18, 32, 220)))
+                badge_bg.setPen(QtGui.QPen(lane_color, 0.9))
+                badge_bg.setZValue(item.zValue() + 0.5)
+
+                badge_label = QtWidgets.QGraphicsTextItem(label_text, badge_bg)
+                badge_label.setDefaultTextColor(QtGui.QColor("#f3f5ff"))
+                badge_label.setFont(QtGui.QFont("Segoe UI", 8))
+                badge_label.setPos(6, -2)
+                details["lane_badge_bg"] = badge_bg
+                details["lane_badge_label"] = badge_label
+            else:
+                default_brush = details.get("default_brush", details.get("base_brush", item.brush()))
+                default_pen = details.get("default_pen", details.get("base_pen", QtGui.QPen(item.pen())))
+                item.setBrush(QtGui.QBrush(default_brush))
+                item.setPen(QtGui.QPen(default_pen))
+                details["base_brush"] = QtGui.QBrush(item.brush())
+                details["base_pen"] = QtGui.QPen(item.pen())
+        self._build_lane_legend(lanes_present)
+
+    def _build_lane_legend(self, lanes: Set[str]) -> None:
+        self._clear_lane_legend()
+        if not lanes:
+            return
+        sorted_lanes = sorted(lanes)
+        width = 220
+        height = 48 + 24 * len(sorted_lanes)
+        panel = QtWidgets.QGraphicsRectItem(0, 0, width, height)
+        panel.setBrush(QtGui.QBrush(QtGui.QColor(12, 15, 26, 235)))
+        panel.setPen(QtGui.QPen(QtGui.QColor(108, 131, 255, 90)))
+        panel.setZValue(22)
+        rect = self._scene.sceneRect()
+        panel.setPos(rect.right() - width - 40, rect.top() + 40)
+
+        title = QtWidgets.QGraphicsTextItem("Swimlanes", panel)
+        title.setDefaultTextColor(QtGui.QColor("#f3f5ff"))
+        title.setFont(QtGui.QFont("Segoe UI", 10, QtGui.QFont.Weight.Medium))
+        title.setPos(16, 12)
+
+        for idx, lane in enumerate(sorted_lanes):
+            color = QtGui.QColor(self._lane_palette.get(lane, QtGui.QColor("#7F5AF0")))
+            swatch = QtWidgets.QGraphicsRectItem(panel)
+            swatch.setRect(18, 40 + idx * 22, 18, 14)
+            swatch.setBrush(QtGui.QBrush(color))
+            swatch.setPen(QtGui.QPen(QtGui.QColor("#0f1321"), 0.8))
+
+            label = QtWidgets.QGraphicsTextItem(lane, panel)
+            label.setDefaultTextColor(QtGui.QColor("#d7dbff"))
+            label.setFont(QtGui.QFont("Segoe UI", 9))
+            label.setPos(46, 36 + idx * 22)
+
+        self._scene.addItem(panel)
+        self._lane_legend_items.append(panel)
+
+    def _clear_lane_legend(self) -> None:
+        while self._lane_legend_items:
+            item = self._lane_legend_items.pop()
+            if item.scene():
+                self._scene.removeItem(item)
+
     def _rebuild_scene(self) -> None:
         self._scene.clear()
         self._node_items.clear()
@@ -1237,6 +1358,7 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         self._highlight_active = False
         self._current_hover = None
         self._current_edge_hover = None
+        self._clear_lane_legend()
 
         if not self._data or not self._data.get("edges"):
             self.clear()
@@ -1380,7 +1502,7 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         self._scene.setSceneRect(
             QtCore.QRectF(min_x - padding_x, min_y - padding_y, (max_x - min_x) + 2 * padding_x, (max_y - min_y) + 2 * padding_y)
         )
-        self.fitInView(self._scene.sceneRect(), QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self._fit_scene()
 
     def _assign_levels(self, graph: nx.DiGraph, start_node: str) -> Dict[str, int]:
         levels: Dict[str, int] = {}
@@ -1424,7 +1546,9 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         *,
         node_type: str,
         max_freq: int = 1,
+        lane: Optional[str] = None,
     ) -> _FlowNodeItem:
+        lane_color = QtGui.QColor(self._lane_palette[lane]) if lane and lane in self._lane_palette else None
         if node_type == "start":
             base_color = QtGui.QColor("#00E5FF")
             border_color = QtGui.QColor("#0f1321")
@@ -1436,8 +1560,8 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
             width, height = 160, 70
             label = "Complete"
         else:
-            base_color = QtGui.QColor("#7F5AF0")
-            border_color = QtGui.QColor("#0f1321")
+            base_color = lane_color if lane_color else QtGui.QColor("#7F5AF0")
+            border_color = (lane_color.darker(180) if lane_color else QtGui.QColor("#0f1321"))
             width = 210
             gain = freq / max_freq if max_freq else 0
             height = 68 + gain * 40
@@ -1448,8 +1572,12 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         path.addRoundedRect(rect, 18, 18)
         item = _FlowNodeItem(self, key, path)
         gradient = QtGui.QLinearGradient(rect.topLeft(), rect.bottomRight())
-        gradient.setColorAt(0.0, base_color.lighter(120))
-        gradient.setColorAt(1.0, base_color.darker(150))
+        if lane_color and node_type == "activity":
+            gradient.setColorAt(0.0, lane_color.lighter(130))
+            gradient.setColorAt(1.0, lane_color.darker(170))
+        else:
+            gradient.setColorAt(0.0, base_color.lighter(120))
+            gradient.setColorAt(1.0, base_color.darker(150))
         item.setBrush(QtGui.QBrush(gradient))
         pen = QtGui.QPen(border_color, 1.6)
         item.setPen(pen)
@@ -1472,7 +1600,10 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         pct_text = ""
         if self._total_cases:
             pct_text = f" ({freq / self._total_cases:.1%})"
-        item.setToolTip(f"{label}<br>{freq:,} cases{pct_text}")
+        tooltip = f"{label}<br>{freq:,} cases{pct_text}"
+        if lane and node_type == "activity":
+            tooltip += f"<br>Swimlane: {lane}"
+        item.setToolTip(tooltip)
         return item
 
     def _create_edge_items(
@@ -1593,8 +1724,11 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         details = self._edge_details.get((src, dst))
         if details:
             cases = details.get("cases")
-            if cases:
+            if cases and cases != freq:
                 tooltip += f"<br>Cases touching edge: {cases:,}"
+            rework_count = details.get("rework")
+            if rework_count:
+                tooltip += f"<br>Loop events: {int(rework_count):,}"
         return tooltip
 
     def _build_metadata_banner(self, metadata: Dict[str, Any]) -> None:
@@ -1873,6 +2007,18 @@ class InteractiveProcessFlowWidget(QtWidgets.QGraphicsView):
         self._clear_lock()
         super().mouseDoubleClickEvent(event)
 
+    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:  # type: ignore[override]
+        super().resizeEvent(event)
+        self._fit_scene()
+
+    def _fit_scene(self) -> None:
+        if not self._scene.items() or self._locked_nodes or self._locked_edges:
+            return
+        rect = self._scene.itemsBoundingRect()
+        if rect.isNull() or not rect.isValid():
+            return
+        self.fitInView(rect, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+
 
 def _extract_count(label: Optional[str]) -> Optional[float]:
     if not label or "(" not in label or ")" not in label:
@@ -2053,6 +2199,20 @@ class ColumnMappingDialog(QtWidgets.QDialog):
         }
 
 
+
+class PopoutWindow(QtWidgets.QMainWindow):
+    def __init__(self, title: str, widget: QtWidgets.QWidget, parent: Optional[QtWidgets.QWidget] = None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.resize(900, 600)
+        central = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(central)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(widget)
+        self.setCentralWidget(central)
+
 class ProcessMiningApp(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -2074,6 +2234,13 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         self._part_flow_data: Optional[Dict[str, Any]] = None
         self._markov_image_item: Optional[pg.ImageItem] = None
         self._markov_states: List[str] = []
+        self._lane_attribute_key: Optional[str] = None
+        self._bpmn_svg_bytes: Optional[bytes] = None
+        self._markov_data: Optional[Dict[str, Any]] = None
+        self._timeline_data: pd.DataFrame = pd.DataFrame()
+        self._timeline_total_cases: int = 0
+        self._bottleneck_hints: List[Dict[str, Any]] = []
+        self._popouts: List[PopoutWindow] = []
 
         self._setup_palette()
         self._apply_theme()
@@ -2087,6 +2254,10 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         self._artifacts: Optional[process_analysis.ProcessModelArtifacts] = None
 
         self._build_ui()
+        self._filter_timer = QtCore.QTimer(self)
+        self._filter_timer.setSingleShot(True)
+        self._filter_timer.timeout.connect(self.apply_filters)
+
         self.logger.info("User interface initialised. Awaiting log selection.")
 
     # UI construction -----------------------------------------------------
@@ -2333,12 +2504,15 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         attribute_layout.addWidget(self.attribute_values)
         filter_layout.addWidget(attribute_group)
 
-        self.apply_filters_button = QtWidgets.QPushButton("Apply Filters")
-        self.apply_filters_button.clicked.connect(self.apply_filters)
-        filter_layout.addWidget(self.apply_filters_button)
-
         layout.addWidget(filter_group)
         layout.addStretch(1)
+
+        # hook filters to auto-apply
+        self.case_list.itemSelectionChanged.connect(self._trigger_filters)
+        self.activity_list.itemSelectionChanged.connect(self._trigger_filters)
+        self.attribute_values.itemSelectionChanged.connect(self._trigger_filters)
+        self.start_date.dateChanged.connect(lambda *_: self._trigger_filters())
+        self.end_date.dateChanged.connect(lambda *_: self._trigger_filters())
 
         return scroll
 
@@ -2378,14 +2552,18 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         self.tabs.addTab(widget, "Overview")
 
     def _build_process_model_tab(self) -> None:
-        widget = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(widget)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+
+        container = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(container)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(18)
 
         # Part / item flow explorer
         self.part_flow_widget = InteractiveProcessFlowWidget()
-        self.part_flow_widget.setMinimumHeight(420)
+        self.part_flow_widget.setMinimumHeight(360)
+        self.part_flow_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
 
         part_container = QtWidgets.QWidget()
         part_layout = QtWidgets.QVBoxLayout(part_container)
@@ -2402,7 +2580,6 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         volume_btn.setChecked(True)
         performance_btn = QtWidgets.QPushButton("Velocity")
         performance_btn.setCheckable(True)
-
         for btn in (volume_btn, performance_btn):
             btn.setStyleSheet(
                 """
@@ -2422,11 +2599,21 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
                 }
                 """
             )
-
         self.part_flow_mode_buttons.addButton(volume_btn, 0)
         self.part_flow_mode_buttons.addButton(performance_btn, 1)
         part_controls.addWidget(volume_btn)
         part_controls.addWidget(performance_btn)
+
+        part_controls.addWidget(QtWidgets.QLabel("Swimlane"))
+        self.lane_attribute_combo = QtWidgets.QComboBox()
+        part_controls.addWidget(self.lane_attribute_combo)
+        self.lane_attribute_combo.currentIndexChanged.connect(self._on_lane_attribute_changed)
+
+        self.part_popout_button = QtWidgets.QPushButton("Pop out view")
+        self.part_popout_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        self.part_popout_button.setToolTip("Open the flow explorer in a separate window")
+        self.part_popout_button.clicked.connect(self._popout_part_flow)
+        part_controls.addWidget(self.part_popout_button)
         part_controls.addStretch(1)
         self.part_flow_mode_buttons.buttonClicked.connect(self._on_part_flow_mode_changed)
         part_layout.addLayout(part_controls)
@@ -2440,19 +2627,109 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         part_layout.addWidget(self.part_flow_caption)
 
         part_card = self._create_chart_card(
-            "Part / Item Flow Explorer",
+            "Flow Explorer",
             part_container,
-            "Interactive drill-down view that surfaces the dominant part flows. Hover to explore coverage, click to lock, and watch grey arcs for rework loops.",
+            "Interactive drill-down view that surfaces the dominant flows. Hover to explore coverage, click to lock, and watch grey arcs for rework loops.",
         )
         layout.addWidget(part_card)
 
+        # Rework summary
+        self.rework_loops_table = QtWidgets.QTableView()
+        self.rework_loops_table.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
+        self.rework_loops_table.setAlternatingRowColors(True)
+        self.rework_loops_model = PandasTableModel()
+        self.rework_loops_table.setModel(self.rework_loops_model)
+        self.rework_loops_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.rework_loops_table.verticalHeader().setVisible(False)
+        rework_container = QtWidgets.QWidget()
+        rework_layout = QtWidgets.QVBoxLayout(rework_container)
+        rework_layout.setContentsMargins(0, 0, 0, 0)
+        rework_layout.setSpacing(6)
+        rework_header = QtWidgets.QHBoxLayout()
+        rework_header.addStretch(1)
+        self.rework_popout_button = QtWidgets.QPushButton("Pop out view")
+        self.rework_popout_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        self.rework_popout_button.setToolTip("Open the rework hotspot table in a separate window")
+        self.rework_popout_button.clicked.connect(self._popout_rework_summary)
+        rework_header.addWidget(self.rework_popout_button)
+        rework_layout.addLayout(rework_header)
+        rework_layout.addWidget(self.rework_loops_table, stretch=1)
+        self.rework_loops_caption = QtWidgets.QLabel("Rework loops will appear here once a log is loaded.")
+        self.rework_loops_caption.setStyleSheet("color: #9aa5d9; font-size: 11px;")
+        self.rework_loops_caption.setWordWrap(True)
+        rework_layout.addWidget(self.rework_loops_caption)
+        rework_card = self._create_chart_card(
+            "Rework Hotspots",
+            rework_container,
+            "Top self-loops ranked by cases affected. Grey arcs in the explorer correspond to these repeats.",
+        )
+        layout.addWidget(rework_card)
+
+        # Predictive bottleneck hints
+        self.bottleneck_list = QtWidgets.QListWidget()
+        self.bottleneck_list.setAlternatingRowColors(True)
+        self.bottleneck_list.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.NoSelection)
+        bottleneck_container = QtWidgets.QWidget()
+        bottleneck_layout = QtWidgets.QVBoxLayout(bottleneck_container)
+        bottleneck_layout.setContentsMargins(0, 0, 0, 0)
+        bottleneck_layout.setSpacing(6)
+        bottleneck_header = QtWidgets.QHBoxLayout()
+        bottleneck_header.addStretch(1)
+        self.bottleneck_popout_button = QtWidgets.QPushButton("Pop out view")
+        self.bottleneck_popout_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        self.bottleneck_popout_button.setToolTip("Open bottleneck hints in a separate window")
+        self.bottleneck_popout_button.clicked.connect(self._popout_bottleneck_hints)
+        bottleneck_header.addWidget(self.bottleneck_popout_button)
+        bottleneck_layout.addLayout(bottleneck_header)
+        bottleneck_layout.addWidget(self.bottleneck_list)
+        self.bottleneck_caption = QtWidgets.QLabel("Bottleneck hints will appear here once a log is loaded.")
+        self.bottleneck_caption.setStyleSheet("color: #9aa5d9; font-size: 11px;")
+        self.bottleneck_caption.setWordWrap(True)
+        bottleneck_layout.addWidget(self.bottleneck_caption)
+        bottleneck_card = self._create_chart_card(
+            "Predictive Bottleneck Hints",
+            bottleneck_container,
+            "High-duration transitions ranked to highlight emerging bottlenecks based on current performance data.",
+        )
+        layout.addWidget(bottleneck_card)
+
+        # Timeline drill-down
+        self.timeline_plot = pg.PlotWidget(axisItems={"bottom": DateAxisItem()})
+        self.timeline_plot.setMinimumHeight(340)
+        self.timeline_plot.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
+        self._configure_plot_widget(self.timeline_plot)
+        self.timeline_plot.setMouseEnabled(x=True, y=False)
+        timeline_container = QtWidgets.QWidget()
+        timeline_layout = QtWidgets.QVBoxLayout(timeline_container)
+        timeline_layout.setContentsMargins(0, 0, 0, 0)
+        timeline_layout.setSpacing(6)
+        timeline_header = QtWidgets.QHBoxLayout()
+        timeline_header.addStretch(1)
+        self.timeline_popout_button = QtWidgets.QPushButton("Pop out view")
+        self.timeline_popout_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        self.timeline_popout_button.setToolTip("Open the timeline drill-down in a separate window")
+        self.timeline_popout_button.clicked.connect(self._popout_timeline)
+        timeline_header.addWidget(self.timeline_popout_button)
+        timeline_layout.addLayout(timeline_header)
+        timeline_layout.addWidget(self.timeline_plot, stretch=1)
+        self.timeline_caption = QtWidgets.QLabel("Timeline will appear here once a log is loaded.")
+        self.timeline_caption.setStyleSheet("color: #9aa5d9; font-size: 11px;")
+        self.timeline_caption.setWordWrap(True)
+        timeline_layout.addWidget(self.timeline_caption)
+        timeline_card = self._create_chart_card(
+            "Timeline Drill-down",
+            timeline_container,
+            "Gantt-style view of case start/end times to spot long-running items and idle gaps.",
+        )
+        layout.addWidget(timeline_card)
+
         # Interactive Petri + SVG side-by-side
         self.process_svg = QtSvgWidgets.QSvgWidget()
-        self.process_svg.setMinimumHeight(380)
-        self.process_svg.setMinimumWidth(520)
+        self.process_svg.setMinimumHeight(360)
+        self.process_svg.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self.process_graph_widget = PetriNetGraphWidget()
-        self.process_graph_widget.setMinimumHeight(380)
-        self.process_graph_widget.setMinimumWidth(520)
+        self.process_graph_widget.setMinimumHeight(360)
+        self.process_graph_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
 
         model_container = QtWidgets.QWidget()
         model_layout = QtWidgets.QVBoxLayout(model_container)
@@ -2478,6 +2755,11 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         self.export_xes_button.clicked.connect(self.export_xes)
         controls_row.addWidget(self.export_xes_button)
 
+        self.export_flow_button = QtWidgets.QPushButton("Export Flow Payload (JSON)")
+        self.export_flow_button.setToolTip("Generate a Godot-ready JSON snapshot of the current flow.")
+        self.export_flow_button.clicked.connect(self.export_flow_payload)
+        controls_row.addWidget(self.export_flow_button)
+
         self.decoration_mode_combo = QtWidgets.QComboBox()
         self.decoration_mode_combo.addItems(["Frequency", "Performance", "Minimal"])
         self.decoration_mode_combo.setCurrentText("Frequency")
@@ -2501,6 +2783,12 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         self.reset_graph_button = QtWidgets.QPushButton("Reset View")
         self.reset_graph_button.clicked.connect(self.process_graph_widget.reset_view)
         controls_row.addWidget(self.reset_graph_button)
+
+        self.petri_popout_button = QtWidgets.QPushButton("Pop out view")
+        self.petri_popout_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        self.petri_popout_button.setToolTip("Open the interactive Petri net in a separate window")
+        self.petri_popout_button.clicked.connect(self._popout_petri_view)
+        controls_row.addWidget(self.petri_popout_button)
         controls_row.addStretch(1)
         model_layout.addLayout(controls_row)
 
@@ -2513,33 +2801,53 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
 
         # BPMN representation
         self.bpmn_widget = QtSvgWidgets.QSvgWidget()
-        self.bpmn_widget.setMinimumHeight(360)
+        self.bpmn_widget.setMinimumHeight(340)
+        self.bpmn_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
+        bpmn_container = QtWidgets.QWidget()
+        bpmn_layout = QtWidgets.QVBoxLayout(bpmn_container)
+        bpmn_layout.setContentsMargins(0, 0, 0, 0)
+        bpmn_layout.setSpacing(6)
+        bpmn_header = QtWidgets.QHBoxLayout()
+        bpmn_header.addStretch(1)
+        self.bpmn_popout_button = QtWidgets.QPushButton("Pop out view")
+        self.bpmn_popout_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        self.bpmn_popout_button.setToolTip("Open the BPMN blueprint in a separate window")
+        self.bpmn_popout_button.clicked.connect(self._popout_bpmn)
+        bpmn_header.addWidget(self.bpmn_popout_button)
+        bpmn_layout.addLayout(bpmn_header)
+        bpmn_layout.addWidget(self.bpmn_widget)
         bpmn_card = self._create_chart_card(
             "BPMN Blueprint",
-            self.bpmn_widget,
+            bpmn_container,
             "Block-structured BPMN view converted from the discovered model for business-friendly communication.",
         )
         layout.addWidget(bpmn_card)
 
         # Markov heatmap
         self.markov_plot = pg.PlotWidget()
+        self.markov_plot.setMinimumHeight(320)
+        self.markov_plot.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self._configure_plot_widget(self.markov_plot)
-        self.markov_plot.setMinimumHeight(340)
         self.markov_plot.setMenuEnabled(False)
         self.markov_plot.setMouseEnabled(x=False, y=False)
         self.markov_plot.getPlotItem().showGrid(x=False, y=False)
-        self._markov_image_item: Optional[pg.ImageItem] = None
-        self.markov_plot.getPlotItem().setTitle(
-            "<span style='color:#e3e7ff;font-size:13pt;'>Transition Probabilities</span>"
-        )
+        self._markov_image_item = None
         markov_container = QtWidgets.QWidget()
         markov_layout = QtWidgets.QVBoxLayout(markov_container)
         markov_layout.setContentsMargins(0, 0, 0, 0)
         markov_layout.setSpacing(6)
+        markov_header = QtWidgets.QHBoxLayout()
+        markov_header.addStretch(1)
+        self.markov_popout_button = QtWidgets.QPushButton("Pop out view")
+        self.markov_popout_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        self.markov_popout_button.setToolTip("Open the Markov heatmap in a separate window")
+        self.markov_popout_button.clicked.connect(self._popout_markov)
+        markov_header.addWidget(self.markov_popout_button)
+        markov_layout.addLayout(markov_header)
         markov_layout.addWidget(self.markov_plot, stretch=1)
         self.markov_caption = QtWidgets.QLabel("Load a log to project transition probabilities.")
-        self.markov_caption.setWordWrap(True)
         self.markov_caption.setStyleSheet("color: #9aa5d9; font-size: 11px;")
+        self.markov_caption.setWordWrap(True)
         markov_layout.addWidget(self.markov_caption)
         markov_card = self._create_chart_card(
             "Markov Flow Heatmap",
@@ -2551,15 +2859,24 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
 
         # Declare constraints table
         self.declare_table = QtWidgets.QTableView()
+        self.declare_table.setAlternatingRowColors(True)
+        self.declare_table.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self.declare_model = PandasTableModel()
         self.declare_table.setModel(self.declare_model)
         self.declare_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.declare_table.verticalHeader().setVisible(False)
-        self.declare_table.setAlternatingRowColors(True)
         declare_container = QtWidgets.QWidget()
         declare_layout = QtWidgets.QVBoxLayout(declare_container)
         declare_layout.setContentsMargins(0, 0, 0, 0)
         declare_layout.setSpacing(6)
+        declare_header = QtWidgets.QHBoxLayout()
+        declare_header.addStretch(1)
+        self.declare_popout_button = QtWidgets.QPushButton("Pop out view")
+        self.declare_popout_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        self.declare_popout_button.setToolTip("Open the declare constraints in a separate window")
+        self.declare_popout_button.clicked.connect(self._popout_declares)
+        declare_header.addWidget(self.declare_popout_button)
+        declare_layout.addLayout(declare_header)
         declare_layout.addWidget(self.declare_table, stretch=1)
         self.declare_caption = QtWidgets.QLabel("Deriving constraint catalogue…")
         self.declare_caption.setStyleSheet("color: #9aa5d9; font-size: 11px;")
@@ -2574,11 +2891,13 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
 
         legend_group = QtWidgets.QGroupBox("How to read this model")
         legend_layout = QtWidgets.QVBoxLayout(legend_group)
-
         self.process_legend_label = QtWidgets.QLabel(
             """
             <ul>
                 <li>The <b>part / item flow explorer</b> surfaces dominant transitions and grey rework loops with interactive drill-down.</li>
+                <li>The <b>rework hotspots</b> table ranks self-loops by impact.</li>
+                <li><b>Predictive bottleneck hints</b> highlight transitions trending slower than the median.</li>
+                <li>The <b>timeline drill-down</b> maps case spans to expose long-running items and idle gaps.</li>
                 <li>The <b>interactive Petri net</b> shows tokens and branching logic. Adjust overlays to focus on throughput or counts.</li>
                 <li>The <b>BPMN blueprint</b> restates the model in a business-friendly diagram ready for stakeholders.</li>
                 <li>The <b>Markov heatmap</b> highlights which steps typically follow each other, revealing loops and exits.</li>
@@ -2598,7 +2917,9 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         layout.addWidget(legend_group)
         layout.addStretch(1)
 
-        self.tabs.addTab(widget, "Process Flow")
+        scroll.setWidget(container)
+        self.tabs.addTab(scroll, "Process Flow")
+
 
     def _build_variant_tab(self) -> None:
         widget = QtWidgets.QWidget()
@@ -2967,6 +3288,7 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             container.df["activity"].nunique(),
         )
         self._populate_filters()
+        self._update_lane_attribute_options()
         self.refresh_views()
 
     # Filters --------------------------------------------------------------
@@ -3025,6 +3347,15 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             item = QtWidgets.QListWidgetItem(value)
             item.setSelected(True)
             self.attribute_values.addItem(item)
+        if self.log_container:
+            self._trigger_filters()
+
+    def _trigger_filters(self) -> None:
+        if not hasattr(self, "_filter_timer"):
+            self.apply_filters()
+            return
+        # Debounce rapid selection changes to keep the UI responsive.
+        self._filter_timer.start(350)
 
     def apply_filters(self) -> None:
         if not self.log_container:
@@ -3058,11 +3389,12 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             return
 
         self.filtered_log = subset
+        self._update_lane_attribute_options()
         self._artifacts = None
         self.refresh_views()
-        self.statusBar().showMessage("Filters applied.", 3000)
+        self.statusBar().showMessage("Filters updated.", 2000)
         self.logger.info(
-            "Filters applied. Remaining %d events across %d cases.",
+            "Filters updated. Remaining %d events across %d cases.",
             len(subset.df),
             subset.df["case_id"].nunique(),
         )
@@ -3122,7 +3454,11 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             if hasattr(self, "part_flow_widget"):
                 self.part_flow_widget.clear()
             if hasattr(self, "part_flow_caption"):
-                self.part_flow_caption.setText("Load a log to explore part flow.")
+                self.part_flow_caption.setText("Load a log to explore the flow.")
+            if hasattr(self, "rework_loops_model"):
+                self.rework_loops_model.set_dataframe(pd.DataFrame())
+            if hasattr(self, "rework_loops_caption"):
+                self.rework_loops_caption.setText("Rework loops will appear here once a log is loaded.")
             if hasattr(self, "bpmn_widget"):
                 self.bpmn_widget.load(QtCore.QByteArray())
             if hasattr(self, "declare_model"):
@@ -3131,6 +3467,16 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
                 self.declare_caption.setText("Load a log to derive constraints.")
             if hasattr(self, "markov_plot"):
                 self._clear_markov_heatmap()
+                self._markov_data = None
+            if hasattr(self, "timeline_plot"):
+                self.timeline_plot.clear()
+            if hasattr(self, "timeline_caption"):
+                self.timeline_caption.setText("Timeline will appear here once a log is loaded.")
+            self._timeline_data = pd.DataFrame()
+            self._timeline_total_cases = 0
+            self.bottleneck_list.clear()
+            self.bottleneck_caption.setText("Bottleneck hints will appear here once a log is loaded.")
+            self._bottleneck_hints = []
             return
 
         if hasattr(self, "part_flow_widget"):
@@ -3141,7 +3487,32 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
                 self.logger.exception("Failed to compute part/item flow explorer data.")
                 self._part_flow_data = None
                 self.part_flow_widget.clear()
-                self.part_flow_caption.setText("Part flow view unavailable – see logs for details.")
+                self.part_flow_caption.setText("Flow explorer view unavailable – see logs for details.")
+                self._update_rework_summary(None)
+
+        try:
+            hints = process_analysis.compute_bottleneck_hints(
+                self.filtered_log,
+                dfg_data=self._part_flow_data if self._part_flow_data else None,
+            )
+            self._update_bottleneck_list(hints)
+        except Exception as exc:  # pylint: disable=broad-except
+            self.logger.exception("Failed to compute bottleneck hints.")
+            self._bottleneck_hints = []
+            self.bottleneck_list.clear()
+            self.bottleneck_caption.setText("Bottleneck hints unavailable – see logs for details.")
+
+        try:
+            timeline_df, total_cases = process_analysis.compute_timeline_data(self.filtered_log, limit=120)
+            self._timeline_total_cases = total_cases
+            self._timeline_data = timeline_df
+            self._render_timeline_plot(self.timeline_plot, timeline_df)
+        except Exception as exc:  # pylint: disable=broad-except
+            self.logger.exception("Failed to compute timeline drill-down.")
+            self._timeline_data = pd.DataFrame()
+            self._timeline_total_cases = 0
+            self.timeline_plot.clear()
+            self.timeline_caption.setText("Timeline unavailable – see logs for details.")
         try:
             self._artifacts = process_analysis.discover_process_model(self.filtered_log.event_log)
             self.logger.info("Process model discovered for current selection.")
@@ -3179,6 +3550,7 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         try:
             markov_data = process_analysis.compute_transition_matrix(self.filtered_log)
             self._plot_markov_heatmap(markov_data)
+            self._markov_data = markov_data
         except Exception as exc:  # pylint: disable=broad-except
             self.logger.exception("Failed to compute transition probabilities.")
             self._clear_markov_heatmap()
@@ -3543,39 +3915,387 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         if not self._part_flow_data:
             self.part_flow_widget.clear()
             if hasattr(self, "part_flow_caption"):
-                self.part_flow_caption.setText("Load a log to explore part flow.")
+                self.part_flow_caption.setText("Load a log to explore the flow.")
+            self._update_rework_summary(None)
             return
         mode_id = self.part_flow_mode_buttons.checkedId() if hasattr(self, "part_flow_mode_buttons") else 0
         mode = "performance" if mode_id == 1 else "frequency"
         self.part_flow_widget.set_mode(mode)
         self.part_flow_widget.set_data(self._part_flow_data)
+        self._apply_lane_attribute()
         self._update_part_flow_caption(self._part_flow_data.get("metadata"), mode)
+        self._update_rework_summary(self._part_flow_data)
 
     def _update_part_flow_caption(self, metadata: Optional[Dict[str, Any]], mode: str) -> None:
         if not hasattr(self, "part_flow_caption"):
             return
         if not metadata:
-            self.part_flow_caption.setText("Load a log to explore part flow.")
+            self.part_flow_caption.setText("Load a log to explore the flow.")
             return
         total_cases = metadata.get("total_cases")
         truncated = metadata.get("truncated", 0)
-        if mode == "performance":
-            base = (
-                "Velocity mode: teal arcs are quicker, coral arcs spotlight slower transitions; grey arcs highlight rework loops."
-            )
-        else:
-            base = "Volume mode: thicker links show busier transitions; grey arcs highlight repeat loops."
+        base = (
+            "Velocity mode: teal arcs are quicker, coral arcs spotlight slower transitions; grey arcs highlight rework loops."
+            if mode == "performance"
+            else "Volume mode: thicker links show busier transitions; grey arcs highlight repeat loops."
+        )
+        rework_edges = self._part_flow_data.get("rework_edges") if self._part_flow_data else {}
+        edge_cases = self._part_flow_data.get("edge_cases") if self._part_flow_data else {}
+        rework_cases = sum(edge_cases.get(edge, 0) for edge in (rework_edges or {}).keys())
         parts = [base]
         if total_cases:
             parts.append(f"{int(total_cases):,} cases summarised")
+        if rework_cases and total_cases:
+            pct = rework_cases / total_cases * 100
+            parts.append(f"{rework_cases:,} cases with loops ({pct:.1f}%)")
         if truncated:
             parts.append(f"{int(truncated)} low-volume steps hidden for clarity")
         self.part_flow_caption.setText(" • ".join(parts))
 
-    def _on_part_flow_mode_changed(self, button: QtWidgets.QAbstractButton) -> None:
+    def _update_rework_summary(self, data: Optional[Dict[str, Any]]) -> None:
+        if not hasattr(self, "rework_loops_model"):
+            return
+        if not data:
+            self.rework_loops_model.set_dataframe(pd.DataFrame())
+            if hasattr(self, "rework_loops_caption"):
+                self.rework_loops_caption.setText("Rework loops will appear here once a log is loaded.")
+            return
+        rework_edges = data.get("rework_edges") or {}
+        edge_cases = data.get("edge_cases") or {}
+        total_cases = data.get("metadata", {}).get("total_cases") or 1
+        rows = []
+        for (src, dst), count in rework_edges.items():
+            if src != dst:
+                continue
+            cases = edge_cases.get((src, dst), 0)
+            rows.append(
+                {
+                    "Activity": src,
+                    "Loop events": count,
+                    "Cases": cases,
+                    "Cases (%)": round(cases / total_cases * 100, 2),
+                }
+            )
+        df = pd.DataFrame(rows).sort_values(["Cases", "Loop events"], ascending=[False, False]) if rows else pd.DataFrame(columns=["Activity", "Loop events", "Cases", "Cases (%)"])
+        self.rework_loops_model.set_dataframe(df)
+        if hasattr(self, "rework_loops_caption"):
+            if df.empty:
+                self.rework_loops_caption.setText("No self-loops detected for the current slice.")
+            else:
+                top_activity = df.iloc[0]["Activity"]
+                pct = df.iloc[0]["Cases (%)"]
+                self.rework_loops_caption.setText(
+                    f"Top loop: {top_activity} repeats in {pct:.1f}% of cases; table sorted by affected cases."
+                )
+
+    def _update_lane_attribute_options(self) -> None:
+        if not hasattr(self, "lane_attribute_combo"):
+            return
+        if not self.filtered_log or self.filtered_log.df.empty:
+            self.lane_attribute_combo.blockSignals(True)
+            self.lane_attribute_combo.clear()
+            self.lane_attribute_combo.addItem("Activity", "activity")
+            self.lane_attribute_combo.blockSignals(False)
+            self._lane_attribute_key = "activity"
+            self._apply_lane_attribute()
+            return
+
+        df = self.filtered_log.df
+        candidate_attrs = [
+            ("line", "Line"),
+            ("part_type", "Part type"),
+            ("area", "Area"),
+            ("resource", "Resource"),
+        ]
+        options = [(key, label) for key, label in candidate_attrs if key in df.columns]
+        if not options:
+            options = [("activity", "Activity")]
+
+        current_data = self._lane_attribute_key
+        self.lane_attribute_combo.blockSignals(True)
+        self.lane_attribute_combo.clear()
+        for key, label in options:
+            self.lane_attribute_combo.addItem(label, key)
+        if current_data not in [key for key, _ in options]:
+            current_data = options[0][0]
+        self._lane_attribute_key = current_data
+        index = next((i for i, (key, _) in enumerate(options) if key == current_data), 0)
+        self.lane_attribute_combo.setCurrentIndex(index)
+        self.lane_attribute_combo.blockSignals(False)
+        self._apply_lane_attribute()
+
+    def _apply_lane_attribute(self) -> None:
         if not hasattr(self, "part_flow_widget"):
             return
-        if button is None:
+        if not self._part_flow_data or not self.filtered_log or not self._lane_attribute_key:
+            self.part_flow_widget.set_lane_map({}, {})
+            return
+        lane_map = process_analysis.compute_activity_lane_map(self.filtered_log, self._lane_attribute_key)
+        lanes = sorted(set(lane_map.values()))
+        palette = {}
+        for idx, lane in enumerate(lanes):
+            color_hex = self._color_palette[idx % len(self._color_palette)]
+            palette[lane] = QtGui.QColor(color_hex)
+        self.part_flow_widget.set_lane_map(lane_map, palette)
+
+    def _on_lane_attribute_changed(self, index: int) -> None:
+        if not hasattr(self, "lane_attribute_combo"):
+            return
+        data = self.lane_attribute_combo.itemData(index)
+        if not data:
+            return
+        self._lane_attribute_key = str(data)
+        self._apply_lane_attribute()
+
+    def _update_bottleneck_list(self, hints: List[Dict[str, Any]]) -> None:
+        self._bottleneck_hints = hints
+        self.bottleneck_list.clear()
+        if not hints:
+            self.bottleneck_caption.setText("No emerging bottlenecks detected for the current slice.")
+            return
+
+        for hint in hints:
+            transition = hint["transition"]
+            avg_hours = hint["avg_hours"]
+            cases = hint["cases"]
+            slowdown = hint.get("slowdown", 1.0)
+            pct = hint.get("case_pct", 0.0)
+            slowdown_suffix = f" · ×{slowdown:.2f} slower" if slowdown > 1.0 else ""
+            text = f"{transition} · {avg_hours:.1f}h avg · {cases:,} cases ({pct:.1f}%){slowdown_suffix}"
+            item = QtWidgets.QListWidgetItem(text)
+            detail = (
+                f"Transition: {transition}\n"
+                f"Average duration: {avg_hours:.1f} hours\n"
+                f"Cases affected: {cases:,} ({pct:.1f}%)\n"
+                f"Slowdown factor vs. median: {slowdown:.2f}×"
+            )
+            item.setToolTip(detail)
+            self.bottleneck_list.addItem(item)
+
+        slowest = hints[0]
+        summary_parts = [
+            f"{len(hints)} transitions above the slowdown threshold.",
+            f"Slowest: {slowest['transition']} averaging {slowest['avg_hours']:.1f}h.",
+        ]
+        self.bottleneck_caption.setText(" ".join(summary_parts))
+
+    def _render_timeline_plot(self, plot: pg.PlotWidget, timeline_df: pd.DataFrame) -> None:
+        self._configure_plot_widget(plot)
+        plot.clear()
+        item = plot.getPlotItem()
+        item.setTitle("<span style='color:#e3e7ff;font-size:13pt;'>Case Timeline</span>")
+        item.setLabel("bottom", "Time")
+        item.setLabel("left", "Cases")
+        item.showGrid(x=True, y=False, alpha=0.12)
+
+        if timeline_df.empty:
+            self.timeline_caption.setText("Timeline unavailable – no cases in the current filter slice.")
+            return
+
+        durations = timeline_df["duration_hours"].fillna(0.0)
+        min_ts = float(timeline_df["start_ts"].min())
+        max_ts = float(timeline_df["end_ts"].max())
+        if math.isclose(max_ts, min_ts):
+            max_ts = min_ts + 3600.0
+        item.setLimits(xMin=min_ts, xMax=max_ts, yMin=-1, yMax=len(timeline_df) + 1)
+        item.setRange(xRange=(min_ts, max_ts), yRange=(-1, len(timeline_df) + 1), padding=0.05)
+
+        duration_min = float(durations.min())
+        duration_span = float(durations.max() - duration_min) or 1.0
+
+        axis = item.getAxis("left")
+        if len(timeline_df) <= 30:
+            ticks = [(float(row.rank), str(row.case_id)) for row in timeline_df.itertuples()]
+        else:
+            step = max(1, len(timeline_df) // 15)
+            ticks = [
+                (float(row.rank), str(row.case_id))
+                for row in timeline_df.iloc[::step].itertuples()
+            ]
+        axis.setTicks([ticks])
+
+        # Draw horizontal spans for each case.
+        for row in timeline_df.itertuples():
+            ratio = (float(row.duration_hours) - duration_min) / duration_span
+            color = _heat_colour(ratio)
+            pen = pg.mkPen(color.name(), width=6, cap=QtCore.Qt.PenCapStyle.RoundCap)
+            plot.addItem(pg.PlotCurveItem(x=[row.start_ts, row.end_ts], y=[row.rank, row.rank], pen=pen))
+            if len(timeline_df) <= 20:
+                label = pg.TextItem(text=str(row.case_id), color="#d7dbff", anchor=(0.0, 0.5))
+                label.setPos(row.start_ts, row.rank)
+                plot.addItem(label)
+
+        longest_idx = durations.idxmax()
+        median_hours = float(durations.median())
+        truncated = max(0, self._timeline_total_cases - len(timeline_df))
+        parts = []
+        if longest_idx is not None:
+            longest_row = timeline_df.iloc[longest_idx]
+            parts.append(
+                f"Longest case {longest_row['case_id']} spans {longest_row['duration_hours']:.1f}h "
+                f"across {int(longest_row['events'])} events."
+            )
+        parts.append(f"Median duration {median_hours:.1f}h across {self._timeline_total_cases:,} cases.")
+        if truncated:
+            parts.append(f"{truncated} shorter cases hidden for clarity.")
+        self.timeline_caption.setText(" ".join(parts))
+
+    def _open_popout(self, title: str, builder: Callable[[], QtWidgets.QWidget]) -> None:
+        if builder is None:
+            return
+        try:
+            widget = builder()
+        except Exception as exc:  # pragma: no cover - pop-out creation is UI specific
+            self.logger.exception("Failed to create pop-out window for %s", title)
+            self._show_warning(f"Unable to open {title}: {exc}")
+            return
+        if widget is None:
+            return
+        window = PopoutWindow(title, widget, self)
+        window.show()
+        self._popouts.append(window)
+        window.destroyed.connect(lambda *_: self._popouts.remove(window) if window in self._popouts else None)
+
+    def _popout_part_flow(self) -> None:
+        if not self._part_flow_data:
+            self._show_warning("Load a log before opening the flow explorer.")
+            return
+        mode = "performance" if self.part_flow_mode_buttons.checkedId() == 1 else "frequency"
+        lane_map = self.part_flow_widget.lane_map()
+        lane_colors = self.part_flow_widget.lane_colors()
+        data = copy.deepcopy(self._part_flow_data)
+
+        def builder() -> QtWidgets.QWidget:
+            widget = InteractiveProcessFlowWidget()
+            widget.set_mode(mode)
+            widget.set_data(data)
+            widget.set_lane_map(lane_map, lane_colors)
+            return widget
+
+        self._open_popout("Flow Explorer", builder)
+
+    def _popout_rework_summary(self) -> None:
+        df = getattr(self.rework_loops_model, "_dataframe", pd.DataFrame())
+        if df.empty:
+            self._show_warning("No rework loops available to display.")
+            return
+
+        def builder() -> QtWidgets.QWidget:
+            view = QtWidgets.QTableView()
+            model = PandasTableModel()
+            model.set_dataframe(df)
+            view.setModel(model)
+            view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
+            view.verticalHeader().setVisible(False)
+            view.setAlternatingRowColors(True)
+            return view
+
+        self._open_popout("Rework Hotspots", builder)
+
+    def _popout_bottleneck_hints(self) -> None:
+        hints = getattr(self, "_bottleneck_hints", [])
+        if not hints:
+            self._show_warning("No bottleneck hints available for the current slice.")
+            return
+
+        def builder() -> QtWidgets.QWidget:
+            widget = QtWidgets.QListWidget()
+            widget.setAlternatingRowColors(True)
+            widget.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.NoSelection)
+            for hint in hints:
+                slowdown = hint.get("slowdown", 0)
+                slowdown_text = f" (×{slowdown:.2f} slower than median)" if slowdown > 1 else ""
+                text = f"{hint['transition']} — {hint['avg_hours']:.1f}h avg across {hint['cases']:,} cases{slowdown_text}"
+                widget.addItem(text)
+            return widget
+
+        self._open_popout("Predictive Bottleneck Hints", builder)
+
+    def _popout_timeline(self) -> None:
+        if self._timeline_data.empty:
+            self._show_warning("No timeline data available to display.")
+            return
+
+        df = self._timeline_data.copy()
+
+        def builder() -> QtWidgets.QWidget:
+            plot = pg.PlotWidget(axisItems={"bottom": DateAxisItem()})
+            self._configure_plot_widget(plot)
+            plot.setMouseEnabled(x=True, y=False)
+            self._render_timeline_plot(plot, df)
+            return plot
+
+        self._open_popout("Timeline Drill-down", builder)
+
+    def _popout_petri_view(self) -> None:
+        if not self._artifacts:
+            self._show_warning("Discover a Petri net before opening the pop-out view.")
+            return
+        artifacts = self._artifacts
+        mode = self._model_metric_mode
+        layout_mode = self._layout_mode
+        edge_scale = self._edge_scale
+
+        def builder() -> QtWidgets.QWidget:
+            widget = PetriNetGraphWidget()
+            widget.update_graph(artifacts, metric_mode=mode, layout_mode=layout_mode, edge_scale=edge_scale)
+            return widget
+
+        self._open_popout("Interactive Petri Net", builder)
+
+    def _popout_bpmn(self) -> None:
+        if not self._bpmn_svg_bytes:
+            self._show_warning("Generate the BPMN blueprint before opening the pop-out view.")
+            return
+
+        svg_bytes = self._bpmn_svg_bytes
+
+        def builder() -> QtWidgets.QWidget:
+            widget = QtSvgWidgets.QSvgWidget()
+            widget.setMinimumSize(700, 500)
+            widget.load(QtCore.QByteArray(svg_bytes))
+            return widget
+
+        self._open_popout("BPMN Blueprint", builder)
+
+    def _popout_markov(self) -> None:
+        if not self._markov_data:
+            self._show_warning("No Markov data available to display.")
+            return
+
+        data = copy.deepcopy(self._markov_data)
+
+        def builder() -> QtWidgets.QWidget:
+            plot = pg.PlotWidget()
+            self._configure_plot_widget(plot)
+            plot.setMenuEnabled(False)
+            plot.setMouseEnabled(x=False, y=False)
+            plot.getPlotItem().showGrid(x=False, y=False)
+            self._render_markov_plot(plot, data)
+            return plot
+
+        self._open_popout("Markov Flow Heatmap", builder)
+
+    def _popout_declares(self) -> None:
+        df = getattr(self.declare_model, "_dataframe", pd.DataFrame())
+        if df.empty:
+            self._show_warning("No declare constraints available for the current slice.")
+            return
+
+        def builder() -> QtWidgets.QWidget:
+            view = QtWidgets.QTableView()
+            model = PandasTableModel()
+            model.set_dataframe(df)
+            view.setModel(model)
+            view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
+            view.verticalHeader().setVisible(False)
+            view.setAlternatingRowColors(True)
+            return view
+
+        self._open_popout("Declare Constraints", builder)
+
+    def _on_part_flow_mode_changed(self, button: QtWidgets.QAbstractButton) -> None:
+        if not hasattr(self, "part_flow_widget") or button is None:
             return
         mode = "performance" if self.part_flow_mode_buttons.id(button) == 1 else "frequency"
         if not self._part_flow_data:
@@ -3622,17 +4342,20 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
             )
         self.dfg_meta_label.setText("<br>".join(parts))
 
-    def _plot_markov_heatmap(self, data: Dict[str, Any]) -> None:
+    def _render_markov_plot(self, plot: pg.PlotWidget, data: Dict[str, Any]) -> Optional[Tuple[pg.ImageItem, float, List[str]]]:
+        plot.clear()
+        plot_item = plot.getPlotItem()
+        plot_item.setTitle(
+            "<span style='color:#e3e7ff;font-size:13pt;'>Transition Probabilities</span>"
+        )
         states = data.get("states") or []
         probabilities = data.get("probabilities") or []
         matrix = np.array(probabilities, dtype=float)
         if not states or matrix.size == 0:
-            self._clear_markov_heatmap()
-            return
-
-        if self._markov_image_item:
-            self.markov_plot.removeItem(self._markov_image_item)
-            self._markov_image_item = None
+            plot_item.getAxis("bottom").setTicks([])  # type: ignore[arg-type]
+            plot_item.getAxis("left").setTicks([])  # type: ignore[arg-type]
+            plot_item.invertY(True)
+            return None
 
         image_item = pg.ImageItem(matrix)
         cmap = pg.colormap.get("viridis")
@@ -3640,22 +4363,40 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         max_prob = float(matrix.max())
         image_item.setLevels((0.0, max(0.01, max_prob)))
         image_item.setPos(-0.5, -0.5)
-        self.markov_plot.addItem(image_item)
-        self._markov_image_item = image_item
+        plot.addItem(image_item)
 
-        plot_item = self.markov_plot.getPlotItem()
         plot_item.invertY(True)
         plot_item.setRange(
             xRange=(-0.5, matrix.shape[1] - 0.5),
             yRange=(-0.5, matrix.shape[0] - 0.5),
             padding=0.05,
         )
-        x_ticks = list(enumerate(states))
-        y_ticks = list(enumerate(states))
-        plot_item.getAxis("bottom").setTicks([x_ticks])
-        plot_item.getAxis("left").setTicks([y_ticks])
+        ticks = list(enumerate(states))
+        plot_item.getAxis("bottom").setTicks([ticks])
+        plot_item.getAxis("left").setTicks([ticks])
         plot_item.getAxis("bottom").setStyle(autoExpandTextSpace=True, tickFont=QtGui.QFont("Segoe UI", 8))
         plot_item.getAxis("left").setStyle(autoExpandTextSpace=True, tickFont=QtGui.QFont("Segoe UI", 8))
+        return image_item, max_prob, list(states)
+
+    def _plot_markov_heatmap(self, data: Dict[str, Any]) -> None:
+        states = data.get("states") or []
+        probabilities = data.get("probabilities") or []
+        matrix = np.array(probabilities, dtype=float)
+        if not states or matrix.size == 0:
+            self._clear_markov_heatmap()
+            return
+        if self._markov_image_item:
+            self.markov_plot.removeItem(self._markov_image_item)
+            self._markov_image_item = None
+
+        result = self._render_markov_plot(self.markov_plot, data)
+        if result is None:
+            self._clear_markov_heatmap()
+            return
+
+        image_item, max_prob, states_list = result
+        self._markov_image_item = image_item
+        self._markov_states = states_list
 
         if max_prob > 0:
             self.markov_caption.setText(
@@ -3876,6 +4617,28 @@ class ProcessMiningApp(QtWidgets.QMainWindow):
         except Exception as exc:  # pylint: disable=broad-except
             self.logger.exception("Failed to export XES to %s", file_path)
             self._show_error(f"Failed to export XES: {exc}")
+
+    def export_flow_payload(self) -> None:
+        if not self.filtered_log:
+            self.logger.warning("Flow payload export requested with no filtered log.")
+            self._show_warning("Load and filter a log before exporting the flow payload.")
+            return
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Flow Payload",
+            "",
+            "JSON files (*.json)",
+        )
+        if not file_path:
+            return
+        try:
+            payload = process_analysis.build_flow_payload(self.filtered_log, max_activities=24)
+            pathlib.Path(file_path).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            self.statusBar().showMessage(f"Saved flow payload to {file_path}", 5000)
+            self.logger.info("Flow payload exported to %s", file_path)
+        except Exception as exc:  # pylint: disable=broad-except
+            self.logger.exception("Failed to export flow payload to %s", file_path)
+            self._show_error(f"Failed to export flow payload: {exc}")
 
     # Messaging ------------------------------------------------------------
     def _show_error(self, message: str) -> None:

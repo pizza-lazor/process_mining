@@ -1,0 +1,9 @@
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Godot editor cache
+godot_flow/.godot/
+
+# Log files
+process_mining_app.log

@@ -498,6 +498,213 @@ def compute_dfg_frequency_data(
     }
 
 
+def build_flow_payload(
+    log_container: EventLogContainer,
+    *,
+    max_activities: int = 24,
+) -> Dict[str, Any]:
+    """
+    Produce a normalised flow payload that external renderers (e.g., Godot) can consume.
+    """
+    dfg_data = compute_dfg_frequency_data(log_container, max_activities=max_activities)
+
+    metadata = dfg_data.get("metadata", {})
+    edges = dfg_data.get("edges", {})
+    activities = dfg_data.get("activities", {})
+    starts = dfg_data.get("starts", {})
+    ends = dfg_data.get("ends", {})
+    performance_edges = dfg_data.get("performance_edges", {})
+    rework_edges = dfg_data.get("rework_edges", {})
+    edge_cases = dfg_data.get("edge_cases", {})
+    node_cases = dfg_data.get("node_cases", {})
+
+    total_cases = int(metadata.get("total_cases") or len(log_container.event_log))
+
+    node_payload: List[Dict[str, Any]] = []
+    for name, volume in activities.items():
+        node_payload.append(
+            {
+                "id": name,
+                "label": name,
+                "frequency": int(volume),
+                "cases": int(node_cases.get(name, 0)),
+            }
+        )
+
+    node_payload.append(
+        {
+            "id": "__start__",
+            "label": "Start",
+            "frequency": int(sum(starts.values())),
+            "cases": int(sum(starts.values()) or total_cases),
+        }
+    )
+    node_payload.append(
+        {
+            "id": "__end__",
+            "label": "Complete",
+            "frequency": int(sum(ends.values())),
+            "cases": int(sum(ends.values()) or total_cases),
+        }
+    )
+
+    edge_payload: List[Dict[str, Any]] = []
+    for (src, dst), freq in edges.items():
+        edge_payload.append(
+            {
+                "source": src,
+                "target": dst,
+                "frequency": int(freq),
+                "cases": int(edge_cases.get((src, dst), freq)),
+                "duration_seconds": float(performance_edges.get((src, dst), 0) or 0),
+                "is_rework": bool(rework_edges.get((src, dst), 0) > 0 or src == dst),
+            }
+        )
+
+    payload = {
+        "metadata": {
+            "total_cases": total_cases,
+            "kept_activities": int(metadata.get("kept_activities", len(activities))),
+            "max_edge_weight": int(metadata.get("max_edge_weight", 0)),
+            "max_edge_duration": float(metadata.get("max_edge_duration", 0) or 0),
+            "min_edge_duration": float(metadata.get("min_edge_duration", 0) or 0),
+        },
+        "nodes": node_payload,
+        "edges": edge_payload,
+    }
+
+    return payload
+
+
+def compute_activity_lane_map(log_container: EventLogContainer, attribute: str) -> Dict[str, str]:
+    """
+    Derive a mapping from activity to the dominant attribute value so that the UI can colour
+    swimlanes consistently. Falls back to activity name when the attribute is unavailable.
+    """
+    df = log_container.df
+    if df.empty or not attribute:
+        return {}
+
+    if attribute == "activity":
+        return {activity: activity for activity in df["activity"].unique()}
+
+    if attribute not in df.columns:
+        return {}
+
+    lane_map: Dict[str, str] = {}
+    grouped = df.groupby("activity")[attribute]
+    for activity, series in grouped:
+        values = series.dropna().astype(str)
+        if values.empty:
+            continue
+        # Use the most frequent attribute value for the swimlane assignment.
+        top_value = values.value_counts().idxmax()
+        lane_map[str(activity)] = str(top_value)
+    return lane_map
+
+
+def compute_bottleneck_hints(
+    log_container: EventLogContainer,
+    *,
+    dfg_data: Optional[Dict[str, Any]] = None,
+    top_n: int = 6,
+    slowdown_threshold: float = 1.15,
+) -> List[Dict[str, Any]]:
+    """
+    Identify slow transitions compared with the median directly-follows duration.
+    Returns dictionaries containing transition label, average hours, affected cases, and slowdown factor.
+    """
+    data = dfg_data if dfg_data is not None else compute_dfg_frequency_data(log_container, max_activities=20)
+    performance_edges = data.get("performance_edges") or {}
+    edge_cases = data.get("edge_cases") or {}
+    edge_frequencies = data.get("edges") or {}
+    total_cases = max(int((data.get("metadata") or {}).get("total_cases") or 0), 1)
+
+    durations: List[Tuple[Tuple[str, str], float, int]] = []
+    for edge, duration in performance_edges.items():
+        if not duration:
+            continue
+        src, dst = edge
+        # Ignore artificial start/end arcs.
+        if src == "__end__" or dst == "__start__":
+            continue
+        seconds = float(duration)
+        if seconds <= 0:
+            continue
+        cases = edge_cases.get(edge) or edge_frequencies.get(edge) or 0
+        if cases <= 0:
+            continue
+        durations.append((edge, seconds, int(cases)))
+
+    if not durations:
+        return []
+
+    median_seconds = statistics.median(seconds for _, seconds, _ in durations)
+    median_seconds = median_seconds if median_seconds > 0 else 1.0
+
+    hints: List[Dict[str, Any]] = []
+    for (src, dst), seconds, cases in durations:
+        slowdown = seconds / median_seconds if median_seconds else 0
+        if slowdown_threshold and slowdown < slowdown_threshold:
+            continue
+        transition = f"{'Start' if src == '__start__' else src} → {'Complete' if dst == '__end__' else dst}"
+        hints.append(
+            {
+                "transition": transition,
+                "avg_hours": seconds / 3600.0,
+                "cases": cases,
+                "case_pct": cases / total_cases * 100 if total_cases else 0.0,
+                "slowdown": slowdown,
+            }
+        )
+
+    hints.sort(key=lambda item: (item["slowdown"], item["avg_hours"], item["cases"]), reverse=True)
+    if top_n:
+        hints = hints[:top_n]
+    return hints
+
+
+def compute_timeline_data(
+    log_container: EventLogContainer,
+    *,
+    limit: int = 120,
+) -> Tuple[pd.DataFrame, int]:
+    """
+    Build a per-case timeline summary including start, end, duration, and event counts.
+    Returns the truncated dataframe along with the total case count before truncation.
+    """
+    df = log_container.df
+    if df.empty:
+        columns = ["case_id", "start", "end", "duration_hours", "events", "activities", "start_ts", "end_ts", "rank"]
+        return pd.DataFrame(columns=columns), 0
+
+    ordered = df.sort_values(["case_id", "timestamp"])
+    grouped = ordered.groupby("case_id")
+    summary = grouped["timestamp"].agg(["min", "max"])
+    summary["duration_hours"] = (summary["max"] - summary["min"]).dt.total_seconds() / 3600.0
+    summary["events"] = grouped.size()
+    summary["activities"] = grouped["activity"].nunique()
+
+    summary = summary.reset_index().rename(columns={"min": "start", "max": "end", "case_id": "case_id"})
+    summary["start"] = pd.to_datetime(summary["start"])
+    summary["end"] = pd.to_datetime(summary["end"])
+    summary["start_ts"] = summary["start"].map(lambda ts: ts.to_pydatetime().timestamp())
+    summary["end_ts"] = summary["end"].map(lambda ts: ts.to_pydatetime().timestamp())
+
+    total_cases = len(summary)
+    if limit and total_cases > limit:
+        # Prioritise the longest cases for drilling into delays while keeping a representative spread.
+        longest = summary.nlargest(limit, "duration_hours")
+        # Preserve chronological order for plotting readability.
+        summary = longest.sort_values("start")
+    else:
+        summary = summary.sort_values("start")
+
+    summary = summary.reset_index(drop=True)
+    summary["rank"] = np.arange(len(summary))
+    return summary, total_cases
+
+
 def render_bpmn_svg(artifacts: ProcessModelArtifacts) -> bytes:
     """
     Convert the discovered Petri net to BPMN and render it as SVG.
