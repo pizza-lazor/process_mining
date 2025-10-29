@@ -478,3 +478,304 @@ AttributeError: 'ImageItem' object has no attribute 'translate'
 2025-10-28 10:24:58,193 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
 2025-10-28 10:24:58,193 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
 2025-10-28 10:32:05,112 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-28 11:10:02,271 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 11:10:02,272 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 11:10:02,313 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 11:10:02,425 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 11:10:21,375 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/manufacturing.csv
+2025-10-28 11:10:21,377 ERROR process_mining_app.ui: Unable to read CSV preview for /home/pizza_lazor/Documents/Development/pm4py/data/manufacturing.csv
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/log_loader.py", line 197, in read_csv_summary
+    return pd.read_csv(buffer, nrows=50)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 626, in _read
+    return parser.read(nrows)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1923, in read
+    ) = self._engine.read(  # type: ignore[attr-defined]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/c_parser_wrapper.py", line 234, in read
+    chunks = self._reader.read_low_memory(nrows)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "parsers.pyx", line 850, in pandas._libs.parsers.TextReader.read_low_memory
+  File "parsers.pyx", line 905, in pandas._libs.parsers.TextReader._read_rows
+  File "parsers.pyx", line 874, in pandas._libs.parsers.TextReader._tokenize_rows
+  File "parsers.pyx", line 891, in pandas._libs.parsers.TextReader._check_tokenize_status
+  File "parsers.pyx", line 2061, in pandas._libs.parsers.raise_parser_error
+pandas.errors.ParserError: Error tokenizing data. C error: Expected 1 fields in line 6, saw 3
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/log_loader.py", line 201, in read_csv_summary
+    return pd.read_csv(buffer, nrows=50, sep=None, engine="python")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 626, in _read
+    return parser.read(nrows)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1923, in read
+    ) = self._engine.read(  # type: ignore[attr-defined]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/python_parser.py", line 288, in read
+    alldata = self._rows_to_cols(content)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/python_parser.py", line 1063, in _rows_to_cols
+    self._alert_malformed(msg, row_num + 1)
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/python_parser.py", line 781, in _alert_malformed
+    raise ParserError(msg)
+pandas.errors.ParserError: Expected 2 fields in line 4, saw 4
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 2723, in open_csv
+    preview = read_csv_summary(bytes_data)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/log_loader.py", line 203, in read_csv_summary
+    raise LogFormatError(f"Unable to parse CSV preview: {exc_second}") from exc_second
+app.log_loader.LogFormatError: Unable to parse CSV preview: Expected 2 fields in line 4, saw 4
+2025-10-28 11:10:21,379 ERROR process_mining_app.ui: Unable to read CSV preview: Unable to parse CSV preview: Expected 2 fields in line 4, saw 4
+2025-10-28 11:10:54,996 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/manufacturing.csv
+2025-10-28 11:10:54,997 ERROR process_mining_app.ui: Unable to read CSV preview for /home/pizza_lazor/Documents/Development/pm4py/data/manufacturing.csv
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/log_loader.py", line 197, in read_csv_summary
+    return pd.read_csv(buffer, nrows=50)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 626, in _read
+    return parser.read(nrows)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1923, in read
+    ) = self._engine.read(  # type: ignore[attr-defined]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/c_parser_wrapper.py", line 234, in read
+    chunks = self._reader.read_low_memory(nrows)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "parsers.pyx", line 850, in pandas._libs.parsers.TextReader.read_low_memory
+  File "parsers.pyx", line 905, in pandas._libs.parsers.TextReader._read_rows
+  File "parsers.pyx", line 874, in pandas._libs.parsers.TextReader._tokenize_rows
+  File "parsers.pyx", line 891, in pandas._libs.parsers.TextReader._check_tokenize_status
+  File "parsers.pyx", line 2061, in pandas._libs.parsers.raise_parser_error
+pandas.errors.ParserError: Error tokenizing data. C error: Expected 1 fields in line 6, saw 3
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/log_loader.py", line 201, in read_csv_summary
+    return pd.read_csv(buffer, nrows=50, sep=None, engine="python")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 626, in _read
+    return parser.read(nrows)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1923, in read
+    ) = self._engine.read(  # type: ignore[attr-defined]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/python_parser.py", line 288, in read
+    alldata = self._rows_to_cols(content)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/python_parser.py", line 1063, in _rows_to_cols
+    self._alert_malformed(msg, row_num + 1)
+  File "/home/pizza_lazor/Documents/Development/pm4py/.venv/lib/python3.11/site-packages/pandas/io/parsers/python_parser.py", line 781, in _alert_malformed
+    raise ParserError(msg)
+pandas.errors.ParserError: Expected 2 fields in line 4, saw 4
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 2723, in open_csv
+    preview = read_csv_summary(bytes_data)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pizza_lazor/Documents/Development/pm4py/app/log_loader.py", line 203, in read_csv_summary
+    raise LogFormatError(f"Unable to parse CSV preview: {exc_second}") from exc_second
+app.log_loader.LogFormatError: Unable to parse CSV preview: Expected 2 fields in line 4, saw 4
+2025-10-28 11:10:54,999 ERROR process_mining_app.ui: Unable to read CSV preview: Unable to parse CSV preview: Expected 2 fields in line 4, saw 4
+2025-10-28 11:10:58,113 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-28 11:10:58,125 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-28 11:10:58,155 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 11:10:58,173 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 11:10:58,181 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-28 11:10:58,224 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 11:10:58,238 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 11:10:58,251 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 11:10:58,251 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-28 11:11:20,989 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 11:11:21,007 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 11:11:21,011 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=10).
+2025-10-28 11:11:21,042 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 11:11:21,055 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 11:11:21,057 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 11:11:21,057 INFO process_mining_app.ui: Filters applied. Remaining 5 events across 1 cases.
+2025-10-28 11:11:34,219 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-28 11:31:47,247 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 11:31:47,247 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 11:31:47,256 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 11:31:47,403 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 11:31:52,322 INFO process_mining_app.ui: Loading bundled sample log from data/sample_order_to_cash.csv
+2025-10-28 11:31:52,332 INFO process_mining_app.ui: Log context updated (48 events, 10 cases, 5 activities).
+2025-10-28 11:31:52,366 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 11:31:52,385 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 11:31:52,391 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=14).
+2025-10-28 11:31:52,433 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 11:31:52,446 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 11:31:52,459 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 11:31:52,459 INFO process_mining_app.ui: Sample log loaded successfully (48 events, 10 cases).
+2025-10-28 11:33:20,458 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv
+2025-10-28 11:33:21,798 INFO process_mining_app.ui: Log context updated (2273 events, 300 cases, 10 activities).
+2025-10-28 11:33:21,877 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 11:33:21,894 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 11:33:21,900 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-28 11:33:22,014 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 11:33:22,034 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 11:33:22,048 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 11:33:22,048 INFO process_mining_app.ui: CSV log loaded from /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv (2273 events, 300 cases).
+2025-10-28 11:33:25,915 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-28 12:10:44,110 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 12:10:44,110 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 12:10:44,119 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 12:10:44,275 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 12:10:54,709 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv
+2025-10-28 12:10:56,419 INFO process_mining_app.ui: Log context updated (2273 events, 300 cases, 10 activities).
+2025-10-28 12:10:56,508 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 12:10:56,527 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 12:10:56,540 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-28 12:10:56,660 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 12:10:56,682 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 12:10:56,703 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 12:10:56,703 INFO process_mining_app.ui: CSV log loaded from /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv (2273 events, 300 cases).
+2025-10-28 12:11:22,866 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 12:11:22,883 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 12:11:22,887 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=18).
+2025-10-28 12:11:22,922 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 12:11:22,936 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 12:11:22,938 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 12:11:22,938 INFO process_mining_app.ui: Filters applied. Remaining 9 events across 1 cases.
+2025-10-28 12:11:33,702 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-28 12:18:18,001 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 12:18:18,001 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 12:18:18,012 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 12:18:18,187 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 12:18:34,775 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv
+2025-10-28 12:18:36,441 INFO process_mining_app.ui: Log context updated (2273 events, 300 cases, 10 activities).
+2025-10-28 12:18:36,529 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 12:18:36,547 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 12:18:36,559 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-28 12:18:36,673 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 12:18:36,693 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 12:18:36,716 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 12:18:36,716 INFO process_mining_app.ui: CSV log loaded from /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv (2273 events, 300 cases).
+2025-10-28 12:19:07,665 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 12:19:07,686 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 12:19:07,691 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=18).
+2025-10-28 12:19:07,727 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 12:19:07,740 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 12:19:07,743 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 12:19:07,743 INFO process_mining_app.ui: Filters applied. Remaining 9 events across 1 cases.
+2025-10-28 12:19:19,073 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 12:19:19,092 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 12:19:19,098 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=22).
+2025-10-28 12:19:19,136 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 12:19:19,148 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 12:19:19,152 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 12:19:19,152 INFO process_mining_app.ui: Filters applied. Remaining 16 events across 2 cases.
+2025-10-28 12:20:15,830 INFO process_mining_app.runtime: Application closed with exit code 0
+2025-10-28 13:06:14,919 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 13:06:14,920 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 13:06:14,961 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 13:06:15,113 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 13:06:28,633 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/manufacturing.csv
+2025-10-28 13:06:31,785 WARNING process_mining_app.ui: CSV column mapping error for /home/pizza_lazor/Documents/Development/pm4py/data/manufacturing.csv: Unable to parse CSV content. Ensure the file uses a consistent delimiter (e.g., comma or semicolon) and that embedded commas are quoted.
+2025-10-28 13:06:31,785 ERROR process_mining_app.ui: Unable to parse CSV content. Ensure the file uses a consistent delimiter (e.g., comma or semicolon) and that embedded commas are quoted.
+2025-10-28 13:06:36,756 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv
+2025-10-28 13:06:37,880 INFO process_mining_app.ui: Log context updated (2273 events, 300 cases, 10 activities).
+2025-10-28 13:06:37,986 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 13:06:38,005 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 13:06:38,018 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-28 13:06:38,106 ERROR process_mining_app.ui: Failed to compute flow map data.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 3736, in update_variant_explorer
+    self.variant_flow_widget.set_data(dfg_data)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 613, in set_data
+    item = self._create_node_item(node, pos, freq, node_type=node_type)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: VariantFlowGraphWidget._create_node_item() missing 1 required positional argument: 'total_cases'
+2025-10-28 13:06:38,106 WARNING process_mining_app.ui: Could not build flow map: VariantFlowGraphWidget._create_node_item() missing 1 required positional argument: 'total_cases'
+2025-10-28 13:06:38,354 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 13:06:38,370 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 13:06:38,376 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-28 13:06:38,467 ERROR process_mining_app.ui: Failed to compute flow map data.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 3736, in update_variant_explorer
+    self.variant_flow_widget.set_data(dfg_data)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 613, in set_data
+    item = self._create_node_item(node, pos, freq, node_type=node_type)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: VariantFlowGraphWidget._create_node_item() missing 1 required positional argument: 'total_cases'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 3736, in update_variant_explorer
+    self.variant_flow_widget.set_data(dfg_data)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 613, in set_data
+    item = self._create_node_item(node, pos, freq, node_type=node_type)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: VariantFlowGraphWidget._create_node_item() missing 1 required positional argument: 'total_cases'
+2025-10-28 13:06:38,468 WARNING process_mining_app.ui: Could not build flow map: VariantFlowGraphWidget._create_node_item() missing 1 required positional argument: 'total_cases'
+2025-10-28 13:06:53,878 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 13:06:53,905 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 13:06:53,930 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 13:06:53,930 INFO process_mining_app.ui: Filters updated. Remaining 2273 events across 300 cases.
+2025-10-28 13:06:56,150 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 13:06:56,174 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 13:06:56,188 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 13:06:56,188 INFO process_mining_app.ui: CSV log loaded from /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv (2273 events, 300 cases).
+2025-10-28 13:08:40,897 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 13:08:40,917 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 13:08:40,923 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-28 13:08:41,016 ERROR process_mining_app.ui: Failed to compute flow map data.
+Traceback (most recent call last):
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 3736, in update_variant_explorer
+    self.variant_flow_widget.set_data(dfg_data)
+  File "/home/pizza_lazor/Documents/Development/pm4py/pyqt_app.py", line 613, in set_data
+    item = self._create_node_item(node, pos, freq, node_type=node_type)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: VariantFlowGraphWidget._create_node_item() missing 1 required positional argument: 'total_cases'
+2025-10-28 13:08:41,017 WARNING process_mining_app.ui: Could not build flow map: VariantFlowGraphWidget._create_node_item() missing 1 required positional argument: 'total_cases'
+2025-10-28 13:08:54,767 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 13:08:54,789 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 13:08:54,801 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 13:08:54,802 INFO process_mining_app.ui: Filters updated. Remaining 2273 events across 300 cases.
+2025-10-28 16:29:53,544 INFO process_mining_app: Logging initialised. Writing to /home/pizza_lazor/Documents/Development/pm4py/process_mining_app.log
+2025-10-28 16:29:53,545 INFO process_mining_app.runtime: Starting QApplication event loop.
+2025-10-28 16:29:53,590 INFO process_mining_app.ui: ProcessMiningApp initialising.
+2025-10-28 16:29:53,758 INFO process_mining_app.ui: User interface initialised. Awaiting log selection.
+2025-10-28 16:30:16,415 INFO process_mining_app.ui: Selected CSV file: /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv
+2025-10-28 16:30:18,904 INFO process_mining_app.ui: Log context updated (2273 events, 300 cases, 10 activities).
+2025-10-28 16:30:19,021 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 16:30:19,040 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 16:30:19,053 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-28 16:30:19,185 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 16:30:19,206 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 16:30:19,241 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 16:30:19,241 INFO process_mining_app.ui: CSV log loaded from /home/pizza_lazor/Documents/Development/pm4py/data/factory_parts.csv (2273 events, 300 cases).
+2025-10-28 16:30:19,422 INFO process_mining_app.ui: Process model discovered for current selection.
+2025-10-28 16:30:19,441 INFO process_mining_app.ui: Process model visual updated (frequency mode).
+2025-10-28 16:30:19,446 INFO process_mining_app.ui: Interactive Petri net refreshed (mode=frequency, edges=26).
+2025-10-28 16:30:19,559 INFO process_mining_app.ui: Interactive DFG visualisation refreshed.
+2025-10-28 16:30:19,580 INFO process_mining_app.ui: Behaviour analytics refreshed (throughput, events, variants, resources, rework).
+2025-10-28 16:30:19,594 INFO process_mining_app.ui: Conformance metrics refreshed (avg=1.0, min=1.0, max=1.0).
+2025-10-28 16:30:19,595 INFO process_mining_app.ui: Filters updated. Remaining 2273 events across 300 cases.
+2025-10-28 16:54:50,416 INFO process_mining_app.runtime: Application closed with exit code 0
